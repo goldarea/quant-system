@@ -1,0 +1,14 @@
+{
+  "name": "quant-system",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local market-data MVP for historical stock lookup and charting.",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test --experimental-test-isolation=none tests/*.test.js"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

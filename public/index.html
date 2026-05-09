@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Quant System</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>Quant System</h1>
+        <p>A股与美股行情查询</p>
+      </div>
+      <div class="status" id="healthStatus">连接中</div>
+    </header>
+
+    <main class="layout">
+      <aside class="sidebar" aria-label="股票搜索">
+        <label class="label" for="searchInput">股票代码或名称</label>
+        <div class="search-row">
+          <input id="searchInput" type="search" value="AAPL" autocomplete="off">
+          <button id="searchButton" type="button">搜索</button>
+        </div>
+        <div id="symbolList" class="symbol-list"></div>
+      </aside>
+
+      <section class="workspace">
+        <div class="toolbar">
+          <div>
+            <div class="eyebrow">当前标的</div>
+            <h2 id="instrumentTitle">选择股票</h2>
+          </div>
+          <div class="controls" aria-label="周期选择">
+            <button class="range active" data-range="1mo" type="button">1月</button>
+            <button class="range" data-range="3mo" type="button">3月</button>
+            <button class="range" data-range="6mo" type="button">6月</button>
+            <button class="range" data-range="1y" type="button">1年</button>
+            <button class="range" data-range="5y" type="button">5年</button>
+          </div>
+        </div>
+
+        <section class="metrics" aria-label="报价摘要">
+          <div>
+            <span>最新价</span>
+            <strong id="lastPrice">-</strong>
+          </div>
+          <div>
+            <span>日期</span>
+            <strong id="lastTime">-</strong>
+          </div>
+          <div>
+            <span>成交量</span>
+            <strong id="lastVolume">-</strong>
+          </div>
+          <div>
+            <span>数据源</span>
+            <strong id="dataSource">-</strong>
+          </div>
+        </section>
+
+        <section class="chart-panel">
+          <div id="message" class="message">请选择或搜索一个标的。</div>
+          <svg id="chart" viewBox="0 0 960 420" role="img" aria-label="历史走势"></svg>
+        </section>
+
+        <section class="table-panel">
+          <table>
+            <thead>
+              <tr>
+                <th>日期</th>
+                <th>开盘</th>
+                <th>最高</th>
+                <th>最低</th>
+                <th>收盘</th>
+                <th>成交量</th>
+              </tr>
+            </thead>
+            <tbody id="barsTable"></tbody>
+          </table>
+        </section>
+      </section>
+    </main>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
