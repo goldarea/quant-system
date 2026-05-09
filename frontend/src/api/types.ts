@@ -51,6 +51,33 @@ export interface BacktestTrade {
   slippagePct: number;
 }
 
+export interface BacktestReturnPoint {
+  time: string;
+  returnPct: number;
+}
+
+export interface BacktestDrawdownPeriod {
+  start: string;
+  end: string;
+  durationBars: number;
+  maxDrawdownPct: number;
+}
+
+export interface BacktestTradeMetrics {
+  averageHoldingBars: number;
+  averageWin: number;
+  averageLoss: number;
+  profitFactor: number;
+  payoffRatio: number;
+}
+
+export interface BacktestBenchmark {
+  name: string;
+  finalEquity: number;
+  totalReturnPct: number;
+  excessReturnPct: number;
+}
+
 export interface BacktestSummary {
   initialCapital: number;
   finalEquity: number;
@@ -59,6 +86,13 @@ export interface BacktestSummary {
   tradeCount: number;
   winRatePct: number;
   totalFees: number;
+  annualizedReturnPct: number;
+  annualizedVolatilityPct: number;
+  sharpeRatio: number;
+  calmarRatio: number;
+  maxDrawdownStart: string;
+  maxDrawdownEnd: string;
+  maxDrawdownDurationBars: number;
 }
 
 export interface BacktestResponse {
@@ -74,6 +108,10 @@ export interface BacktestResponse {
   summary: BacktestSummary;
   equityCurve: BacktestEquityPoint[];
   trades: BacktestTrade[];
+  dailyReturns: BacktestReturnPoint[];
+  drawdown: BacktestDrawdownPeriod;
+  tradeMetrics: BacktestTradeMetrics;
+  benchmark: BacktestBenchmark;
 }
 
 export interface HistoryImportResponse {

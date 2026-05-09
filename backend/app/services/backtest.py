@@ -1,8 +1,14 @@
+from math import sqrt
+
 from app.models import (
+    BacktestBenchmark,
+    BacktestDrawdownPeriod,
     BacktestEquityPoint,
     BacktestResponse,
+    BacktestReturnPoint,
     BacktestSummary,
     BacktestTrade,
+    BacktestTradeMetrics,
     Bar,
     Instrument,
     ValidationApiError,
@@ -99,6 +105,13 @@ def run_ma_crossover_backtest(
     final_equity = equity_curve[-1].equity
     sell_count = len(closed_results)
     win_rate = 0.0 if sell_count == 0 else sum(1 for result in closed_results if result > 0) / sell_count * 100
+    daily_returns = _return_points(equity_curve)
+    drawdown = _drawdown_period(equity_curve)
+    annualized_return_pct = _annualized_return_pct(float(initial_capital), final_equity, len(equity_curve), interval)
+    annualized_volatility_pct = _annualized_volatility_pct(daily_returns, interval)
+    sharpe_ratio = 0.0 if annualized_volatility_pct == 0 else annualized_return_pct / annualized_volatility_pct
+    calmar_ratio = 0.0 if drawdown.maxDrawdownPct == 0 else annualized_return_pct / drawdown.maxDrawdownPct
+    benchmark = _buy_and_hold_benchmark(bars, float(initial_capital), (final_equity - initial_capital) / initial_capital * 100)
 
     return BacktestResponse(
         instrument=instrument,
@@ -114,13 +127,24 @@ def run_ma_crossover_backtest(
             initialCapital=_round(float(initial_capital)),
             finalEquity=_round(final_equity),
             totalReturnPct=_round((final_equity - initial_capital) / initial_capital * 100),
-            maxDrawdownPct=_round(max_drawdown_pct),
+            maxDrawdownPct=_round(drawdown.maxDrawdownPct),
             tradeCount=len(trades),
             winRatePct=_round(win_rate),
             totalFees=_round(total_fees),
+            annualizedReturnPct=_round(annualized_return_pct),
+            annualizedVolatilityPct=_round(annualized_volatility_pct),
+            sharpeRatio=_round(sharpe_ratio),
+            calmarRatio=_round(calmar_ratio),
+            maxDrawdownStart=drawdown.start,
+            maxDrawdownEnd=drawdown.end,
+            maxDrawdownDurationBars=drawdown.durationBars,
         ),
         equityCurve=equity_curve,
         trades=trades,
+        dailyReturns=daily_returns,
+        drawdown=drawdown,
+        tradeMetrics=_trade_metrics(trades, closed_results, bars),
+        benchmark=benchmark,
     )
 
 
@@ -134,3 +158,114 @@ def _trade(bar: Bar, side: str, price: float, quantity: float, equity: float, fe
         fee=_round(fee),
         slippagePct=_round(slippage_pct),
     )
+
+
+def _periods_per_year(interval) -> int:
+    if interval == "1wk":
+        return 52
+    if interval == "1mo":
+        return 12
+    return 252
+
+
+def _return_points(equity_curve: list[BacktestEquityPoint]) -> list[BacktestReturnPoint]:
+    points: list[BacktestReturnPoint] = []
+    for index in range(1, len(equity_curve)):
+        previous = equity_curve[index - 1].equity
+        current = equity_curve[index].equity
+        return_pct = 0.0 if previous == 0 else (current - previous) / previous * 100
+        points.append(BacktestReturnPoint(time=equity_curve[index].time, returnPct=_round(return_pct)))
+    return points
+
+
+def _annualized_return_pct(initial_capital: float, final_equity: float, periods: int, interval) -> float:
+    if initial_capital <= 0 or periods <= 1 or final_equity <= 0:
+        return 0.0
+    years = (periods - 1) / _periods_per_year(interval)
+    if years <= 0:
+        return 0.0
+    return ((final_equity / initial_capital) ** (1 / years) - 1) * 100
+
+
+def _annualized_volatility_pct(return_points: list[BacktestReturnPoint], interval) -> float:
+    if len(return_points) < 2:
+        return 0.0
+    returns = [point.returnPct / 100 for point in return_points]
+    mean_return = sum(returns) / len(returns)
+    variance = sum((value - mean_return) ** 2 for value in returns) / (len(returns) - 1)
+    return sqrt(variance) * sqrt(_periods_per_year(interval)) * 100
+
+
+def _drawdown_period(equity_curve: list[BacktestEquityPoint]) -> BacktestDrawdownPeriod:
+    if not equity_curve:
+        return BacktestDrawdownPeriod(start="", end="", durationBars=0, maxDrawdownPct=0)
+
+    peak_index = 0
+    best_start = 0
+    best_end = 0
+    max_drawdown_pct = 0.0
+    for index, point in enumerate(equity_curve):
+        if point.equity > equity_curve[peak_index].equity:
+            peak_index = index
+        peak_equity = equity_curve[peak_index].equity
+        drawdown_pct = 0.0 if peak_equity == 0 else (peak_equity - point.equity) / peak_equity * 100
+        if drawdown_pct > max_drawdown_pct:
+            max_drawdown_pct = drawdown_pct
+            best_start = peak_index
+            best_end = index
+
+    return BacktestDrawdownPeriod(
+        start=equity_curve[best_start].time if max_drawdown_pct > 0 else "",
+        end=equity_curve[best_end].time if max_drawdown_pct > 0 else "",
+        durationBars=best_end - best_start if max_drawdown_pct > 0 else 0,
+        maxDrawdownPct=_round(max_drawdown_pct),
+    )
+
+
+def _trade_metrics(trades: list[BacktestTrade], closed_results: list[float], bars: list[Bar]) -> BacktestTradeMetrics:
+    wins = [result for result in closed_results if result > 0]
+    losses = [result for result in closed_results if result < 0]
+    gross_profit = sum(wins)
+    gross_loss = abs(sum(losses))
+    time_index = {bar.time: index for index, bar in enumerate(bars)}
+    holding_bars: list[int] = []
+    open_trade: BacktestTrade | None = None
+
+    for trade in trades:
+        if trade.side == "buy":
+            open_trade = trade
+        elif trade.side == "sell" and open_trade is not None:
+            buy_index = time_index.get(open_trade.time)
+            sell_index = time_index.get(trade.time)
+            if buy_index is not None and sell_index is not None:
+                holding_bars.append(sell_index - buy_index)
+            open_trade = None
+
+    average_holding = 0.0 if not holding_bars else sum(holding_bars) / len(holding_bars)
+    average_win = 0.0 if not wins else sum(wins) / len(wins)
+    average_loss = 0.0 if not losses else gross_loss / len(losses)
+    profit_factor = 0.0 if gross_loss == 0 else gross_profit / gross_loss
+    payoff_ratio = 0.0 if average_loss == 0 else average_win / average_loss
+
+    return BacktestTradeMetrics(
+        averageHoldingBars=_round(average_holding),
+        averageWin=_round(average_win),
+        averageLoss=_round(average_loss),
+        profitFactor=_round(profit_factor),
+        payoffRatio=_round(payoff_ratio),
+    )
+
+
+def _buy_and_hold_benchmark(bars: list[Bar], initial_capital: float, strategy_return_pct: float) -> BacktestBenchmark:
+    if not bars or bars[0].close <= 0:
+        return BacktestBenchmark(name="buy_and_hold", finalEquity=_round(initial_capital), totalReturnPct=0, excessReturnPct=_round(strategy_return_pct))
+    quantity = initial_capital / bars[0].close
+    final_equity = quantity * bars[-1].close
+    total_return_pct = (final_equity - initial_capital) / initial_capital * 100
+    return BacktestBenchmark(
+        name="buy_and_hold",
+        finalEquity=_round(final_equity),
+        totalReturnPct=_round(total_return_pct),
+        excessReturnPct=_round(strategy_return_pct - total_return_pct),
+    )
+

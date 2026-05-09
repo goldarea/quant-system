@@ -79,3 +79,43 @@ def test_ma_crossover_backtest_rejects_negative_costs():
 
     with pytest.raises(ValidationApiError, match="slippagePct"):
         run_ma_crossover_backtest(instrument(), "1mo", "1d", "local", bars, 2, 3, 1000, 0, -0.1)
+
+
+def test_ma_crossover_backtest_reports_professional_metrics():
+    bars = bars_from_closes([10, 9, 8, 7, 8, 9, 10, 11, 12, 11, 10, 9])
+
+    response = run_ma_crossover_backtest(instrument(), "1mo", "1d", "local", bars, 2, 3, 1000)
+
+    assert len(response.dailyReturns) == len(bars) - 1
+    assert response.summary.annualizedReturnPct > 0
+    assert response.summary.annualizedVolatilityPct > 0
+    assert response.summary.sharpeRatio > 0
+    assert response.summary.calmarRatio > 0
+    assert response.drawdown.maxDrawdownPct == response.summary.maxDrawdownPct
+    assert response.summary.maxDrawdownStart == response.drawdown.start
+    assert response.summary.maxDrawdownEnd == response.drawdown.end
+    assert response.summary.maxDrawdownDurationBars == response.drawdown.durationBars
+    assert response.tradeMetrics.averageHoldingBars == 5
+    assert response.tradeMetrics.averageWin > 0
+    assert response.tradeMetrics.profitFactor == 0
+    assert response.benchmark.name == "buy_and_hold"
+    assert response.benchmark.finalEquity == 900
+    assert response.benchmark.excessReturnPct > 0
+
+
+def test_ma_crossover_backtest_report_handles_flat_no_trade_case():
+    bars = bars_from_closes([10, 10, 10, 10, 10])
+
+    response = run_ma_crossover_backtest(instrument(), "1mo", "1d", "local", bars, 2, 3, 1000)
+
+    assert response.summary.annualizedReturnPct == 0
+    assert response.summary.annualizedVolatilityPct == 0
+    assert response.summary.sharpeRatio == 0
+    assert response.summary.calmarRatio == 0
+    assert response.drawdown.start == ""
+    assert response.drawdown.end == ""
+    assert response.drawdown.durationBars == 0
+    assert response.tradeMetrics.averageHoldingBars == 0
+    assert response.tradeMetrics.averageWin == 0
+    assert response.tradeMetrics.averageLoss == 0
+    assert response.benchmark.totalReturnPct == 0

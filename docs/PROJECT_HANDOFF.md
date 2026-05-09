@@ -174,24 +174,13 @@ Invoke-WebRequest http://127.0.0.1:5173/api/quote?symbol=AAPL -UseBasicParsing
 - Browser-local watchlist added in the frontend.
 - Yahoo and Eastmoney provider adapters implemented with demo fallback.
 - Backend `/api/indicators` and frontend MA/MACD/RSI indicator UI added.
-- Adjustable MA crossover backtest UI, equity curve chart, fee/slippage controls, K-line trade markers, and `/api/backtest` endpoint added.
+- Adjustable MA crossover backtest UI, equity curve chart, fee/slippage controls, K-line trade markers, professional report metrics, and `/api/backtest` endpoint added.
 
 ## Recommended Next Work
 
 ### Phase 7: Professional Backtest Report
 
-Goal: turn the current MA crossover result from a simple equity/trade display into a strategy evaluation report.
-
-Scope:
-
-- Add annualized return, annualized volatility, Sharpe ratio, Calmar ratio, and daily return series.
-- Report maximum drawdown start/end dates and drawdown duration, not only max drawdown percentage.
-- Add trade-level metrics: average holding period, average win/loss, profit factor, and payoff ratio.
-- Add benchmark comparison for the same symbol/range/interval, starting with buy-and-hold.
-- Add a frontend report panel beside the equity curve and trade list.
-- Add backend and frontend tests for deterministic metric calculations.
-
-Why next: the system can already run a backtest, but it needs richer metrics before strategy quality can be judged.
+Status: completed. The `/api/backtest` response now includes daily returns, annualized return, annualized volatility, Sharpe ratio, Calmar ratio, max drawdown start/end/duration, trade-quality metrics, and a buy-and-hold benchmark. The frontend renders these metrics in the strategy backtest panel.
 
 ### Phase 8: Multi-symbol Portfolio Backtesting
 

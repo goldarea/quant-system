@@ -53,7 +53,9 @@ the same bars returned by `/api/history`. Query params include `fastWindow`,
 `slowWindow`, `initialCapital`, `feeRatePct`, and `slippagePct`; defaults are
 MA5/MA20, initial capital `100000`, and zero costs. Trades execute from the
 current close with deterministic percentage fee/slippage accounting, no short
-selling, and no persisted strategy run records.
+selling, and no persisted strategy run records. The response includes a
+professional report with daily returns, annualized return/volatility, Sharpe,
+Calmar, max drawdown period, trade-quality metrics, and a buy-and-hold benchmark.
 
 ## Data Providers
 

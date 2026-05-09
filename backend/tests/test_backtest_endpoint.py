@@ -47,5 +47,9 @@ def test_backtest_endpoint_returns_envelope(tmp_path):
         assert payload["data"]["feeRatePct"] == 0.1
         assert payload["data"]["slippagePct"] == 0.2
         assert len(payload["data"]["equityCurve"]) == 12
+        assert len(payload["data"]["dailyReturns"]) == 11
+        assert payload["data"]["drawdown"]["maxDrawdownPct"] == payload["data"]["summary"]["maxDrawdownPct"]
+        assert payload["data"]["tradeMetrics"]["averageHoldingBars"] > 0
+        assert payload["data"]["benchmark"]["name"] == "buy_and_hold"
     finally:
         main_module.service = previous_service

@@ -105,6 +105,33 @@ class BacktestTrade(BaseModel):
     slippagePct: float = 0
 
 
+class BacktestReturnPoint(BaseModel):
+    time: str
+    returnPct: float
+
+
+class BacktestDrawdownPeriod(BaseModel):
+    start: str
+    end: str
+    durationBars: int
+    maxDrawdownPct: float
+
+
+class BacktestTradeMetrics(BaseModel):
+    averageHoldingBars: float
+    averageWin: float
+    averageLoss: float
+    profitFactor: float
+    payoffRatio: float
+
+
+class BacktestBenchmark(BaseModel):
+    name: str
+    finalEquity: float
+    totalReturnPct: float
+    excessReturnPct: float
+
+
 class BacktestSummary(BaseModel):
     initialCapital: float
     finalEquity: float
@@ -113,6 +140,13 @@ class BacktestSummary(BaseModel):
     tradeCount: int
     winRatePct: float
     totalFees: float = 0
+    annualizedReturnPct: float = 0
+    annualizedVolatilityPct: float = 0
+    sharpeRatio: float = 0
+    calmarRatio: float = 0
+    maxDrawdownStart: str = ""
+    maxDrawdownEnd: str = ""
+    maxDrawdownDurationBars: int = 0
 
 
 class BacktestResponse(BaseModel):
@@ -128,6 +162,10 @@ class BacktestResponse(BaseModel):
     summary: BacktestSummary
     equityCurve: list[BacktestEquityPoint]
     trades: list[BacktestTrade]
+    dailyReturns: list[BacktestReturnPoint]
+    drawdown: BacktestDrawdownPeriod
+    tradeMetrics: BacktestTradeMetrics
+    benchmark: BacktestBenchmark
 
 
 class IndicatorPoint(BaseModel):

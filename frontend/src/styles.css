@@ -139,6 +139,13 @@ body {
   margin-top: 12px;
 }
 
+.backtest-report-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
 .equity-curve-surface {
   width: 100%;
   height: 260px;
@@ -205,6 +212,10 @@ body {
   .quote-heading {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .backtest-report-grid {
+    grid-template-columns: 1fr;
   }
 
   .chart-surface,

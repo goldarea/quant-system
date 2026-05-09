@@ -517,6 +517,32 @@ export default function App() {
                     <Text type="secondary">费用 {backtest.summary.totalFees}</Text>
                   </Card>
                 </div>
+                <div className="backtest-report-grid">
+                  <Card size="small" bordered={false} className="indicator-card">
+                    <Text type="secondary">收益风险</Text>
+                    <Title heading={6}>{backtest.summary.annualizedReturnPct}%</Title>
+                    <Text type="secondary">年化波动 {backtest.summary.annualizedVolatilityPct}%</Text>
+                    <Text type="secondary">Sharpe {backtest.summary.sharpeRatio} / Calmar {backtest.summary.calmarRatio}</Text>
+                  </Card>
+                  <Card size="small" bordered={false} className="indicator-card">
+                    <Text type="secondary">回撤区间</Text>
+                    <Title heading={6}>{backtest.drawdown.maxDrawdownPct}%</Title>
+                    <Text type="secondary">{backtest.drawdown.start || '-'} → {backtest.drawdown.end || '-'}</Text>
+                    <Text type="secondary">持续 {backtest.drawdown.durationBars} bars</Text>
+                  </Card>
+                  <Card size="small" bordered={false} className="indicator-card">
+                    <Text type="secondary">交易质量</Text>
+                    <Title heading={6}>{backtest.tradeMetrics.profitFactor}</Title>
+                    <Text type="secondary">盈亏比 {backtest.tradeMetrics.payoffRatio}</Text>
+                    <Text type="secondary">平均持仓 {backtest.tradeMetrics.averageHoldingBars} bars</Text>
+                  </Card>
+                  <Card size="small" bordered={false} className="indicator-card">
+                    <Text type="secondary">买入持有基准</Text>
+                    <Title heading={6}>{backtest.benchmark.totalReturnPct}%</Title>
+                    <Text type="secondary">最终权益 {backtest.benchmark.finalEquity}</Text>
+                    <Text type="secondary">超额收益 {backtest.benchmark.excessReturnPct}%</Text>
+                  </Card>
+                </div>
                 {backtest.equityCurve.length > 0 && <EquityCurveChart points={backtest.equityCurve} />}
                 <List
                   size="small"
