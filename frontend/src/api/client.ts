@@ -9,7 +9,8 @@ import type {
   IndicatorsResponse,
   Instrument,
   PortfolioBacktestResponse,
-  Quote
+  Quote,
+  StrategyDefinition
 } from './types';
 
 type Fetcher = (input: string, init?: RequestInit) => Promise<Response>;
@@ -30,6 +31,11 @@ interface BacktestParams extends HistoryParams {
   initialCapital?: number;
   feeRatePct?: number;
   slippagePct?: number;
+}
+
+interface StrategyBacktestParams extends HistoryParams {
+  strategy: string;
+  parameters: Record<string, number | string>;
 }
 
 interface PortfolioBacktestParams {
@@ -89,6 +95,10 @@ export function getQuote(symbol: string, options?: ClientOptions) {
   return request<Quote>(`/api/quote?${buildQuery([['symbol', symbol]])}`, options);
 }
 
+export function getStrategies(options?: ClientOptions) {
+  return request<StrategyDefinition[]>('/api/strategies', options);
+}
+
 export function getIndicators(params: HistoryParams, options?: ClientOptions) {
   return request<IndicatorsResponse>(`/api/indicators?${buildQuery([
     ['symbol', params.symbol],
@@ -107,6 +117,16 @@ export function getBacktest(params: BacktestParams, options?: ClientOptions) {
     ['initialCapital', params.initialCapital?.toString()],
     ['feeRatePct', params.feeRatePct?.toString()],
     ['slippagePct', params.slippagePct?.toString()]
+  ])}`, options);
+}
+
+export function getStrategyBacktest(params: StrategyBacktestParams, options?: ClientOptions) {
+  return request<BacktestResponse>(`/api/backtest/run?${buildQuery([
+    ['strategy', params.strategy],
+    ['symbol', params.symbol],
+    ['range', params.range],
+    ['interval', params.interval],
+    ...Object.entries(params.parameters).map(([key, value]) => [key, value.toString()] as [string, string])
   ])}`, options);
 }
 

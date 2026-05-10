@@ -174,7 +174,8 @@ Invoke-WebRequest http://127.0.0.1:5173/api/quote?symbol=AAPL -UseBasicParsing
 - Browser-local watchlist added in the frontend.
 - Yahoo and Eastmoney provider adapters implemented with demo fallback.
 - Backend `/api/indicators` and frontend MA/MACD/RSI indicator UI added.
-- Adjustable MA crossover backtest UI, equity curve chart, fee/slippage controls, K-line trade markers, professional report metrics, and `/api/backtest` endpoint added.
+- Adjustable strategy backtest UI, equity curve chart, fee/slippage controls, K-line trade markers, professional report metrics, and `/api/backtest` endpoint added.
+- Strategy framework added with `/api/strategies`, `/api/backtest/run`, MA crossover, RSI reversal, MACD trend, buy-and-hold, and schema-driven frontend parameter controls.
 
 ## Recommended Next Work
 
@@ -188,17 +189,7 @@ Status: completed. The backend now exposes `/api/backtest/portfolio` for equal-w
 
 ### Phase 9: Strategy Framework
 
-Goal: stop hard-coding the MA crossover as the only strategy path.
-
-Scope:
-
-- Introduce a backend strategy interface with parameter schema, signal generation, and backtest execution hooks.
-- Register initial strategies: MA crossover, RSI reversal, MACD trend, and buy-and-hold benchmark.
-- Add routes such as `/api/strategies` and a generalized backtest run endpoint.
-- Let the frontend select a strategy and render dynamic parameter controls from the strategy schema.
-- Persist strategy run metadata only after the report and portfolio model are stable.
-
-Why next: strategy extensibility is the difference between a demo backtest and a reusable research platform.
+Status: completed. The backend now exposes `/api/strategies` and `/api/backtest/run`, with registered MA crossover, RSI reversal, MACD trend, and buy-and-hold strategies. Strategy definitions include parameter schemas, and the frontend renders a strategy selector plus dynamic parameter controls from that schema. The legacy `/api/backtest` MA crossover endpoint remains available for compatibility.
 
 ### Phase 10: Data Quality and Market Calendar
 

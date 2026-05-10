@@ -8,6 +8,7 @@ import {
   Layout,
   List,
   Radio,
+  Select,
   Space,
   Spin,
   Tabs,
@@ -17,7 +18,7 @@ import {
 } from '@arco-design/web-react';
 import { IconDashboard, IconDelete, IconPlus, IconStar, IconSync } from '@arco-design/web-react/icon';
 
-import { ApiError, getBacktest, getHealth, getHistory, getIndicators, getPortfolioBacktest, getQuote, importHistoryCsv, searchSymbols } from './api/client';
+import { ApiError, getHealth, getHistory, getIndicators, getPortfolioBacktest, getQuote, getStrategies, getStrategyBacktest, importHistoryCsv, searchSymbols } from './api/client';
 import type {
   BacktestResponse,
   HealthResponse,
@@ -27,7 +28,8 @@ import type {
   IndicatorsResponse,
   Instrument,
   PortfolioBacktestResponse,
-  Quote
+  Quote,
+  StrategyDefinition
 } from './api/types';
 import EquityCurveChart from './components/EquityCurveChart';
 import HistoryTable from './components/HistoryTable';
@@ -92,6 +94,9 @@ export default function App() {
   const [history, setHistory] = useState<HistoryResponse | null>(null);
   const [indicators, setIndicators] = useState<IndicatorsResponse | null>(null);
   const [backtest, setBacktest] = useState<BacktestResponse | null>(null);
+  const [strategies, setStrategies] = useState<StrategyDefinition[]>([]);
+  const [strategyId, setStrategyId] = useState('ma_crossover');
+  const [strategyParameters, setStrategyParameters] = useState<Record<string, number | string>>({});
   const [portfolioBacktest, setPortfolioBacktest] = useState<PortfolioBacktestResponse | null>(null);
   const [range, setRange] = useState<HistoryRange>('1y');
   const [interval, setInterval] = useState<HistoryInterval>('1d');
@@ -105,15 +110,20 @@ export default function App() {
   const [backtestLoading, setBacktestLoading] = useState(false);
   const [portfolioBacktestLoading, setPortfolioBacktestLoading] = useState(false);
   const [refreshToken, setRefreshToken] = useState(0);
-  const [fastWindow, setFastWindow] = useState(5);
-  const [slowWindow, setSlowWindow] = useState(20);
-  const [initialCapital, setInitialCapital] = useState(100000);
-  const [feeRatePct, setFeeRatePct] = useState(0);
-  const [slippagePct, setSlippagePct] = useState(0);
   const [visibleAverages, setVisibleAverages] = useState({ ma5: true, ma20: true, ma60: false });
   const [showMacd, setShowMacd] = useState(true);
   const [showRsi, setShowRsi] = useState(true);
   const [watchlist, setWatchlist] = useState<Instrument[]>(() => loadWatchlist());
+
+  const selectedStrategy = useMemo(
+    () => strategies.find((strategy) => strategy.id === strategyId),
+    [strategies, strategyId]
+  );
+
+  const strategyParamSignature = useMemo(
+    () => JSON.stringify(strategyParameters),
+    [strategyParameters]
+  );
 
   const selectedInWatchlist = selected ? watchlist.some((item) => item.symbol === selected.symbol) : false;
 
@@ -151,6 +161,16 @@ export default function App() {
     getHealth()
       .then(setHealth)
       .catch((healthError) => setError(errorMessage(healthError)));
+    getStrategies()
+      .then((nextStrategies) => {
+        setStrategies(nextStrategies);
+        const defaultStrategy = nextStrategies.find((strategy) => strategy.id === strategyId) ?? nextStrategies[0];
+        if (defaultStrategy) {
+          setStrategyId(defaultStrategy.id);
+          setStrategyParameters(Object.fromEntries(defaultStrategy.parameters.map((parameter) => [parameter.id, parameter.default])));
+        }
+      })
+      .catch((strategyError) => setError(errorMessage(strategyError)));
   }, []);
 
   useEffect(() => {
@@ -188,21 +208,26 @@ export default function App() {
   }, [selected, range, interval, refreshToken]);
 
   useEffect(() => {
-    if (!selected) return;
+    const nextStrategy = strategies.find((strategy) => strategy.id === strategyId);
+    if (!nextStrategy) return;
+    setStrategyParameters((current) => Object.fromEntries(
+      nextStrategy.parameters.map((parameter) => [parameter.id, current[parameter.id] ?? parameter.default])
+    ));
+  }, [strategies, strategyId]);
+
+  useEffect(() => {
+    if (!selected || !selectedStrategy) return;
 
     let cancelled = false;
     setBacktestLoading(true);
     setBacktestError(null);
 
-    getBacktest({
+    getStrategyBacktest({
+      strategy: strategyId,
       symbol: selected.symbol,
       range,
       interval,
-      fastWindow,
-      slowWindow,
-      initialCapital,
-      feeRatePct,
-      slippagePct
+      parameters: strategyParameters
     })
       .then((nextBacktest) => {
         if (!cancelled) setBacktest(nextBacktest);
@@ -220,7 +245,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [selected, range, interval, fastWindow, slowWindow, initialCapital, feeRatePct, slippagePct, refreshToken]);
+  }, [selected, selectedStrategy, strategyId, range, interval, strategyParamSignature, refreshToken]);
 
   const portfolioSymbols = useMemo(() => watchlist.map((item) => item.symbol), [watchlist]);
 
@@ -239,7 +264,7 @@ export default function App() {
       symbols: portfolioSymbols,
       range,
       interval,
-      initialCapital
+      initialCapital: Number(strategyParameters.initialCapital) || 100000
     })
       .then((nextBacktest) => {
         if (!cancelled) setPortfolioBacktest(nextBacktest);
@@ -257,7 +282,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [portfolioSymbols, range, interval, initialCapital, refreshToken]);
+  }, [portfolioSymbols, range, interval, strategyParameters.initialCapital, refreshToken]);
 
   const handleCsvImport = useCallback(async (file: File | undefined) => {
     if (!file || !selected) return;
@@ -510,23 +535,39 @@ export default function App() {
             <div className="indicator-toolbar">
               <Space wrap>
                 <Text bold>策略回测</Text>
-                <Tag>MA{backtest?.fastWindow ?? 5}/MA{backtest?.slowWindow ?? 20}</Tag>
+                <Select
+                  size="small"
+                  value={strategyId}
+                  style={{ width: 180 }}
+                  onChange={(value) => setStrategyId(value)}
+                  options={strategies.map((strategy) => ({ label: strategy.name, value: strategy.id }))}
+                />
+                <Tag>{selectedStrategy?.name ?? 'strategy'}</Tag>
               </Space>
               <Tag color={backtest?.source === 'demo' ? 'orange' : 'arcoblue'}>{backtest?.source ?? 'backtest'}</Tag>
             </div>
             <Spin loading={backtestLoading} block>
               <div className="backtest-controls">
                 <Space wrap>
-                  <Text type="secondary">快线</Text>
-                  <InputNumber size="small" min={1} value={fastWindow} onChange={(value) => setFastWindow(Number(value) || 1)} />
-                  <Text type="secondary">慢线</Text>
-                  <InputNumber size="small" min={2} value={slowWindow} onChange={(value) => setSlowWindow(Number(value) || 2)} />
-                  <Text type="secondary">本金</Text>
-                  <InputNumber size="small" min={1} step={10000} value={initialCapital} onChange={(value) => setInitialCapital(Number(value) || 1)} />
-                  <Text type="secondary">手续费%</Text>
-                  <InputNumber size="small" min={0} step={0.01} value={feeRatePct} onChange={(value) => setFeeRatePct(Number(value) || 0)} />
-                  <Text type="secondary">滑点%</Text>
-                  <InputNumber size="small" min={0} step={0.01} value={slippagePct} onChange={(value) => setSlippagePct(Number(value) || 0)} />
+                  {selectedStrategy?.parameters.map((parameter) => (
+                    <Space key={parameter.id} size={6}>
+                      <Text type="secondary">{parameter.label}</Text>
+                      <InputNumber
+                        size="small"
+                        min={parameter.min}
+                        max={parameter.max}
+                        step={parameter.step}
+                        value={Number(strategyParameters[parameter.id] ?? parameter.default)}
+                        onChange={(value) => {
+                          const nextValue = Number(value);
+                          setStrategyParameters((current) => ({
+                            ...current,
+                            [parameter.id]: Number.isFinite(nextValue) ? nextValue : parameter.default
+                          }));
+                        }}
+                      />
+                    </Space>
+                  ))}
                 </Space>
               </div>
               {backtestError && (

@@ -132,6 +132,23 @@ class BacktestBenchmark(BaseModel):
     excessReturnPct: float
 
 
+class StrategyParameter(BaseModel):
+    id: str
+    label: str
+    type: str
+    default: float | str
+    min: float | None = None
+    max: float | None = None
+    step: float | None = None
+
+
+class StrategyDefinition(BaseModel):
+    id: str
+    name: str
+    description: str
+    parameters: list[StrategyParameter]
+
+
 class BacktestSummary(BaseModel):
     initialCapital: float
     finalEquity: float

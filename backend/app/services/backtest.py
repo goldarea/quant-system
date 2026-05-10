@@ -10,6 +10,8 @@ from app.models import (
     BacktestTrade,
     BacktestTradeMetrics,
     Bar,
+    HistoryInterval,
+    HistoryRange,
     Instrument,
     ValidationApiError,
 )
@@ -22,8 +24,8 @@ def _round(value: float) -> float:
 
 def run_ma_crossover_backtest(
     instrument: Instrument,
-    range_value,
-    interval,
+    range_value: HistoryRange,
+    interval: HistoryInterval,
     source: str,
     bars: list[Bar],
     fast_window: int = 5,
@@ -36,19 +38,67 @@ def run_ma_crossover_backtest(
         raise ValidationApiError("fastWindow must be at least 2")
     if slow_window <= fast_window:
         raise ValidationApiError("slowWindow must be greater than fastWindow")
+    if len(bars) < slow_window:
+        raise ValidationApiError("Not enough bars for backtest windows")
+
+    fast_ma = moving_average(bars, fast_window)
+    slow_ma = moving_average(bars, slow_window)
+    buy_signals = [False for _ in bars]
+    sell_signals = [False for _ in bars]
+
+    for index in range(1, len(bars)):
+        fast_value = fast_ma[index].value
+        slow_value = slow_ma[index].value
+        previous_fast = fast_ma[index - 1].value
+        previous_slow = slow_ma[index - 1].value
+        if None in (fast_value, slow_value, previous_fast, previous_slow):
+            continue
+        buy_signals[index] = previous_fast <= previous_slow and fast_value > slow_value  # type: ignore[operator]
+        sell_signals[index] = previous_fast >= previous_slow and fast_value < slow_value  # type: ignore[operator]
+
+    return run_long_only_signal_backtest(
+        instrument,
+        range_value,
+        interval,
+        source,
+        bars,
+        buy_signals,
+        sell_signals,
+        fast_window,
+        slow_window,
+        initial_capital,
+        fee_rate_pct,
+        slippage_pct,
+    )
+
+
+def run_long_only_signal_backtest(
+    instrument: Instrument,
+    range_value: HistoryRange,
+    interval: HistoryInterval,
+    source: str,
+    bars: list[Bar],
+    buy_signals: list[bool],
+    sell_signals: list[bool],
+    fast_window: int = 0,
+    slow_window: int = 0,
+    initial_capital: float = 100000,
+    fee_rate_pct: float = 0,
+    slippage_pct: float = 0,
+) -> BacktestResponse:
     if initial_capital <= 0:
         raise ValidationApiError("initialCapital must be greater than 0")
     if fee_rate_pct < 0:
         raise ValidationApiError("feeRatePct must be non-negative")
     if slippage_pct < 0:
         raise ValidationApiError("slippagePct must be non-negative")
-    if len(bars) < slow_window:
-        raise ValidationApiError("Not enough bars for backtest windows")
+    if not bars:
+        raise ValidationApiError("Not enough bars for backtest")
+    if len(buy_signals) != len(bars) or len(sell_signals) != len(bars):
+        raise ValidationApiError("Signal length must match bars")
 
     fee_rate = fee_rate_pct / 100
     slippage_rate = slippage_pct / 100
-    fast_ma = moving_average(bars, fast_window)
-    slow_ma = moving_average(bars, slow_window)
     cash = float(initial_capital)
     position = 0.0
     entry_cost: float | None = None
@@ -60,35 +110,26 @@ def run_ma_crossover_backtest(
     total_fees = 0.0
 
     for index, bar in enumerate(bars):
-        fast_value = fast_ma[index].value
-        slow_value = slow_ma[index].value
-        previous_fast = fast_ma[index - 1].value if index > 0 else None
-        previous_slow = slow_ma[index - 1].value if index > 0 else None
-
-        if None not in (fast_value, slow_value, previous_fast, previous_slow):
-            crossed_above = previous_fast <= previous_slow and fast_value > slow_value  # type: ignore[operator]
-            crossed_below = previous_fast >= previous_slow and fast_value < slow_value  # type: ignore[operator]
-
-            if crossed_above and position == 0:
-                execution_price = bar.close * (1 + slippage_rate)
-                position = cash / (execution_price * (1 + fee_rate))
-                trade_value = position * execution_price
-                fee = trade_value * fee_rate
-                cash -= trade_value + fee
-                total_fees += fee
-                entry_cost = trade_value + fee
-                trades.append(_trade(bar, "buy", execution_price, position, cash + position * bar.close, fee, slippage_pct))
-            elif crossed_below and position > 0:
-                execution_price = bar.close * (1 - slippage_rate)
-                trade_value = position * execution_price
-                fee = trade_value * fee_rate
-                cash = trade_value - fee
-                total_fees += fee
-                if entry_cost is not None:
-                    closed_results.append(cash - entry_cost)
-                trades.append(_trade(bar, "sell", execution_price, position, cash, fee, slippage_pct))
-                position = 0.0
-                entry_cost = None
+        if buy_signals[index] and position == 0:
+            execution_price = bar.close * (1 + slippage_rate)
+            position = cash / (execution_price * (1 + fee_rate))
+            trade_value = position * execution_price
+            fee = trade_value * fee_rate
+            cash -= trade_value + fee
+            total_fees += fee
+            entry_cost = trade_value + fee
+            trades.append(_trade(bar, "buy", execution_price, position, cash + position * bar.close, fee, slippage_pct))
+        elif sell_signals[index] and position > 0:
+            execution_price = bar.close * (1 - slippage_rate)
+            trade_value = position * execution_price
+            fee = trade_value * fee_rate
+            cash = trade_value - fee
+            total_fees += fee
+            if entry_cost is not None:
+                closed_results.append(cash - entry_cost)
+            trades.append(_trade(bar, "sell", execution_price, position, cash, fee, slippage_pct))
+            position = 0.0
+            entry_cost = None
 
         equity = cash + position * bar.close
         peak_equity = max(peak_equity, equity)
@@ -160,7 +201,7 @@ def _trade(bar: Bar, side: str, price: float, quantity: float, equity: float, fe
     )
 
 
-def _periods_per_year(interval) -> int:
+def _periods_per_year(interval: HistoryInterval) -> int:
     if interval == "1wk":
         return 52
     if interval == "1mo":
@@ -178,7 +219,7 @@ def _return_points(equity_curve: list[BacktestEquityPoint]) -> list[BacktestRetu
     return points
 
 
-def _annualized_return_pct(initial_capital: float, final_equity: float, periods: int, interval) -> float:
+def _annualized_return_pct(initial_capital: float, final_equity: float, periods: int, interval: HistoryInterval) -> float:
     if initial_capital <= 0 or periods <= 1 or final_equity <= 0:
         return 0.0
     years = (periods - 1) / _periods_per_year(interval)
@@ -187,7 +228,7 @@ def _annualized_return_pct(initial_capital: float, final_equity: float, periods:
     return ((final_equity / initial_capital) ** (1 / years) - 1) * 100
 
 
-def _annualized_volatility_pct(return_points: list[BacktestReturnPoint], interval) -> float:
+def _annualized_volatility_pct(return_points: list[BacktestReturnPoint], interval: HistoryInterval) -> float:
     if len(return_points) < 2:
         return 0.0
     returns = [point.returnPct / 100 for point in return_points]
@@ -268,4 +309,3 @@ def _buy_and_hold_benchmark(bars: list[Bar], initial_capital: float, strategy_re
         totalReturnPct=_round(total_return_pct),
         excessReturnPct=_round(strategy_return_pct - total_return_pct),
     )
-

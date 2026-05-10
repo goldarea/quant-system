@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { ApiError, getBacktest, getHistory, getPortfolioBacktest, searchSymbols } from './client';
+import { ApiError, getBacktest, getHistory, getPortfolioBacktest, getStrategies, getStrategyBacktest, searchSymbols } from './client';
 
 describe('api client', () => {
   it('unwraps successful API envelopes', async () => {
@@ -68,6 +68,51 @@ describe('api client', () => {
     expect(fetcher).toHaveBeenCalledWith('/api/backtest?symbol=AAPL&range=1y&interval=1d&fastWindow=8&slowWindow=21&initialCapital=50000&feeRatePct=0.1&slippagePct=0.2');
   });
 
+  it('fetches strategy definitions', async () => {
+    const fetcher = vi.fn(async () => new Response(JSON.stringify({
+      ok: true,
+      data: [{ id: 'ma_crossover', name: 'MA Crossover', description: '', parameters: [] }]
+    })));
+
+    const result = await getStrategies({ fetcher });
+
+    expect(fetcher).toHaveBeenCalledWith('/api/strategies');
+    expect(result[0].id).toBe('ma_crossover');
+  });
+
+  it('includes generalized strategy backtest parameters', async () => {
+    const fetcher = vi.fn(async () => new Response(JSON.stringify({
+      ok: true,
+      data: {
+        instrument: { symbol: 'AAPL', name: 'Apple Inc.', market: 'US', currency: 'USD' },
+        range: '1y',
+        interval: '1d',
+        source: 'local',
+        fastWindow: 8,
+        slowWindow: 21,
+        initialCapital: 50000,
+        feeRatePct: 0.1,
+        slippagePct: 0.2,
+        summary: {},
+        equityCurve: [],
+        trades: [],
+        dailyReturns: [],
+        drawdown: {},
+        tradeMetrics: {},
+        benchmark: {}
+      }
+    })));
+
+    await getStrategyBacktest({
+      strategy: 'ma_crossover',
+      symbol: 'AAPL',
+      range: '1y',
+      interval: '1d',
+      parameters: { fastWindow: 8, slowWindow: 21, initialCapital: 50000 }
+    }, { fetcher });
+
+    expect(fetcher).toHaveBeenCalledWith('/api/backtest/run?strategy=ma_crossover&symbol=AAPL&range=1y&interval=1d&fastWindow=8&slowWindow=21&initialCapital=50000');
+  });
   it('includes portfolio backtest parameters', async () => {
     const fetcher = vi.fn(async () => new Response(JSON.stringify({
       ok: true,

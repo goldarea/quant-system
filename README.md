@@ -118,6 +118,8 @@ Routes:
 - `POST /api/history/import?symbol=AAPL&range=1y&interval=1d`
 - `GET /api/quote?symbol=AAPL`
 - `GET /api/indicators?symbol=AAPL&range=1y&interval=1d`
+- `GET /api/strategies`
+- `GET /api/backtest/run?strategy=ma_crossover&symbol=AAPL&range=1y&interval=1d`
 - `GET /api/backtest?symbol=AAPL&range=1y&interval=1d&feeRatePct=0.1&slippagePct=0.2`
 - `GET /api/backtest/portfolio?symbols=AAPL,MSFT&range=1y&interval=1d`
 
@@ -127,10 +129,11 @@ symbols. The dashboard also includes a browser-local watchlist stored in
 upstream endpoints are suitable for personal research and
 prototyping, not licensed production real-time market data.
 
-The dashboard also shows an adjustable long-only moving-average crossover
-backtest. Users can tune fast/slow MA windows, initial capital, fee rate, and
-slippage, inspect the equity curve, review recent trades, and see buy/sell
-markers overlaid on the K-line chart. The backtest report includes annualized
+The dashboard now selects backtest strategies from `/api/strategies` and renders
+parameter controls from the returned schema. Registered strategies include MA
+crossover, RSI reversal, MACD trend, and buy-and-hold; `/api/backtest/run`
+executes the selected strategy while the original `/api/backtest` route remains
+available for MA crossover compatibility. The backtest report includes annualized
 return, annualized volatility, Sharpe, Calmar, drawdown period, trade-quality
 metrics, and a buy-and-hold benchmark comparison. The dashboard also runs an
 equal-weight portfolio backtest for browser-local watchlist symbols, showing
@@ -158,8 +161,8 @@ priority is:
    drawdown periods, trade metrics, and benchmark comparison.
 2. Multi-symbol portfolio backtesting with positions, rebalances, and portfolio
    equity attribution.
-3. Strategy framework so MA crossover becomes one registered strategy rather
-   than hard-coded logic.
+3. Strategy framework is in place for MA crossover, RSI reversal, MACD trend,
+   and buy-and-hold with schema-driven frontend parameters.
 4. Data quality upgrades including market calendars, adjusted prices, missing-bar
    checks, and symbol universes.
 5. Paper trading with simulated accounts, orders, fills, positions, and risk

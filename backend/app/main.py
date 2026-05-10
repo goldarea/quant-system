@@ -9,6 +9,7 @@ from app.services.backtest import run_ma_crossover_backtest
 from app.services.csv_import import parse_history_csv
 from app.services.indicators import build_indicators
 from app.services.portfolio_backtest import run_equal_weight_portfolio_backtest
+from app.services.strategies import list_strategies, run_strategy_backtest
 from app.services.market_data import MarketDataService
 
 
@@ -69,6 +70,53 @@ async def import_history(
         interval=interval_value,
         imported=len(bars),
         source="import",
+    ))
+
+
+@app.get("/api/strategies")
+def strategies():
+    return ok(list_strategies())
+
+
+@app.get("/api/backtest/run")
+def strategy_backtest(
+    strategy: str = Query(default="ma_crossover"),
+    symbol: str | None = Query(default=None),
+    range: str = Query(default="1y"),
+    interval: str = Query(default="1d"),
+    fastWindow: int = Query(default=5),
+    slowWindow: int = Query(default=20),
+    rsiPeriod: int = Query(default=14),
+    oversold: float = Query(default=30),
+    overbought: float = Query(default=70),
+    macdFast: int = Query(default=12),
+    macdSlow: int = Query(default=26),
+    macdSignal: int = Query(default=9),
+    initialCapital: float = Query(default=100000),
+    feeRatePct: float = Query(default=0),
+    slippagePct: float = Query(default=0),
+):
+    history_response = service.get_history(symbol, range, interval)
+    return ok(run_strategy_backtest(
+        strategy,
+        history_response.instrument,
+        history_response.range,
+        history_response.interval,
+        history_response.source,
+        history_response.bars,
+        {
+            "fastWindow": fastWindow,
+            "slowWindow": slowWindow,
+            "rsiPeriod": rsiPeriod,
+            "oversold": oversold,
+            "overbought": overbought,
+            "macdFast": macdFast,
+            "macdSlow": macdSlow,
+            "macdSignal": macdSignal,
+            "initialCapital": initialCapital,
+            "feeRatePct": feeRatePct,
+            "slippagePct": slippagePct,
+        },
     ))
 
 

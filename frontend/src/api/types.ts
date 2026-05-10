@@ -33,6 +33,23 @@ export interface HistoryResponse {
   warning?: ApiWarning;
 }
 
+export interface StrategyParameter {
+  id: string;
+  label: string;
+  type: string;
+  default: number | string;
+  min?: number;
+  max?: number;
+  step?: number;
+}
+
+export interface StrategyDefinition {
+  id: string;
+  name: string;
+  description: string;
+  parameters: StrategyParameter[];
+}
+
 export interface BacktestEquityPoint {
   time: string;
   equity: number;
