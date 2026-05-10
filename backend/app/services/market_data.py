@@ -17,6 +17,7 @@ from app.models import (
 from app.providers.eastmoney import fetch_eastmoney_history
 from app.providers.yahoo import fetch_yahoo_history
 from app.symbols import find_symbol, search_symbols
+from app.services.data_quality import assess_history_quality
 from app.storage import HistoryStore
 
 
@@ -79,6 +80,7 @@ class MarketDataService:
                 bars=stored_bars,
                 source="local",
                 warning=None,
+                quality=assess_history_quality(instrument, interval, stored_bars),
             )
 
         cache_key = {
@@ -97,6 +99,7 @@ class MarketDataService:
                 bars=bars,
                 source="cache",
                 warning=None,
+                quality=assess_history_quality(instrument, interval, bars),
             )
 
         source = "live"
@@ -123,6 +126,7 @@ class MarketDataService:
             bars=bars,
             source=source,
             warning=warning,
+            quality=assess_history_quality(instrument, interval, bars),
         )
 
     def get_quote(self, symbol: str | None) -> Quote:

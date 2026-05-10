@@ -58,6 +58,24 @@ class WarningPayload(BaseModel):
     message: str
 
 
+class DataQualityIssue(BaseModel):
+    code: str
+    severity: str
+    message: str
+    time: str | None = None
+
+
+class DataQualityReport(BaseModel):
+    market: str
+    expectedInterval: HistoryInterval
+    totalBars: int
+    duplicateBars: int
+    missingBars: int
+    invalidBars: int
+    stale: bool
+    issues: list[DataQualityIssue]
+
+
 class HistoryResponse(BaseModel):
     instrument: Instrument
     range: HistoryRange
@@ -65,6 +83,7 @@ class HistoryResponse(BaseModel):
     bars: list[Bar]
     source: str
     warning: WarningPayload | None = None
+    quality: DataQualityReport | None = None
 
 
 class HistoryImportResponse(BaseModel):

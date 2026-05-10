@@ -145,7 +145,10 @@ first local analysis baseline.
 If an upstream provider is unavailable, the backend can return deterministic
 demo bars marked with `source: "demo"` so the UI remains usable. Successful live
 history responses are also persisted to `.cache/quant-system.sqlite3`; later
-requests for the same symbol/range/interval can return `source: "local"`.
+requests for the same symbol/range/interval can return `source: "local"`. Each
+history response includes a data-quality report that checks duplicate bars,
+missing weekday trading bars for US/CN daily data, invalid OHLC values, and stale
+series; the dashboard renders these checks in a data-quality panel.
 
 CSV imports can be sent from the dashboard or posted as `text/csv` to
 `/api/history/import`. Required headers are `time,open,high,low,close,volume`;
@@ -163,7 +166,7 @@ priority is:
    equity attribution.
 3. Strategy framework is in place for MA crossover, RSI reversal, MACD trend,
    and buy-and-hold with schema-driven frontend parameters.
-4. Data quality upgrades including market calendars, adjusted prices, missing-bar
-   checks, and symbol universes.
+4. Data quality checks are in place for duplicate bars, missing US/CN weekday
+   daily bars, invalid OHLC values, and stale history series.
 5. Paper trading with simulated accounts, orders, fills, positions, and risk
    checks before any real broker integration.

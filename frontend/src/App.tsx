@@ -486,6 +486,11 @@ export default function App() {
                   MA60
                 </Checkbox>
                 <Text type="secondary">{bars.length} bars</Text>
+                {history?.quality && (
+                  <Tag color={history.quality.invalidBars || history.quality.duplicateBars ? 'red' : history.quality.missingBars || history.quality.stale ? 'orange' : 'green'}>
+                    Quality {history.quality.issues.length ? `${history.quality.issues.length} issues` : 'ok'}
+                  </Tag>
+                )}
               </Space>
             </div>
 
@@ -504,6 +509,59 @@ export default function App() {
               )}
             </Spin>
           </Card>
+
+          {history?.quality && (
+            <Card bordered={false} className="panel indicator-panel">
+              <div className="indicator-toolbar">
+                <Space wrap>
+                  <Text bold>数据质量</Text>
+                  <Tag>{history.quality.market}</Tag>
+                  <Tag>{history.quality.expectedInterval}</Tag>
+                </Space>
+                <Tag color={history.quality.invalidBars || history.quality.duplicateBars ? 'red' : history.quality.missingBars || history.quality.stale ? 'orange' : 'green'}>
+                  {history.quality.issues.length ? `${history.quality.issues.length} issues` : 'clean'}
+                </Tag>
+              </div>
+              <div className="indicator-summary">
+                <Card size="small" bordered={false} className="indicator-card">
+                  <Text type="secondary">总 bars</Text>
+                  <Title heading={6}>{history.quality.totalBars}</Title>
+                  <Text type="secondary">当前来源 {history.source}</Text>
+                </Card>
+                <Card size="small" bordered={false} className="indicator-card">
+                  <Text type="secondary">缺失</Text>
+                  <Title heading={6}>{history.quality.missingBars}</Title>
+                  <Text type="secondary">按交易日历估算</Text>
+                </Card>
+                <Card size="small" bordered={false} className="indicator-card">
+                  <Text type="secondary">异常</Text>
+                  <Title heading={6}>{history.quality.invalidBars}</Title>
+                  <Text type="secondary">重复 {history.quality.duplicateBars}</Text>
+                </Card>
+                <Card size="small" bordered={false} className="indicator-card">
+                  <Text type="secondary">时效</Text>
+                  <Title heading={6}>{history.quality.stale ? 'Stale' : 'OK'}</Title>
+                  <Text type="secondary">最近 {bars[bars.length - 1]?.time ?? '-'}</Text>
+                </Card>
+              </div>
+              {history.quality.issues.length > 0 && (
+                <List
+                  size="small"
+                  className="backtest-trades"
+                  dataSource={history.quality.issues.slice(0, 6)}
+                  render={(issue) => (
+                    <List.Item key={`${issue.code}-${issue.time ?? issue.message}`}>
+                      <Space wrap>
+                        <Tag color={issue.severity === 'error' ? 'red' : 'orange'}>{issue.code}</Tag>
+                        <Text>{issue.time ?? '-'}</Text>
+                        <Text type="secondary">{issue.message}</Text>
+                      </Space>
+                    </List.Item>
+                  )}
+                />
+              )}
+            </Card>
+          )}
 
           <Card bordered={false} className="panel indicator-panel">
             <div className="indicator-toolbar">

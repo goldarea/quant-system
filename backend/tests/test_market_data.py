@@ -35,6 +35,8 @@ def test_history_uses_deterministic_demo_fallback(tmp_path):
     assert first.source == "demo"
     assert first.bars == second.bars
     assert len(first.bars) == 24
+    assert first.quality is not None
+    assert first.quality.totalBars == 24
 
 
 def test_invalid_history_range_returns_existing_error_envelope():

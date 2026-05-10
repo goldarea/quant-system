@@ -66,6 +66,13 @@ selling, and no persisted strategy run records. The response includes a
 professional report with daily returns, annualized return/volatility, Sharpe,
 Calmar, max drawdown period, trade-quality metrics, and a buy-and-hold benchmark.
 
+## Data Quality
+
+History responses include a `quality` report with total bars, duplicate bars,
+missing US/CN weekday daily bars, invalid OHLC bars, stale-series status, and
+issue details. The checks are intended to catch common local-cache/import and
+provider anomalies before a strategy result is trusted.
+
 ## Data Providers
 
 US-market history uses the Yahoo chart endpoint when available. CN-market

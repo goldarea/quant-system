@@ -24,6 +24,24 @@ export interface ApiWarning {
   message: string;
 }
 
+export interface DataQualityIssue {
+  code: string;
+  severity: 'warning' | 'error' | string;
+  message: string;
+  time?: string | null;
+}
+
+export interface DataQualityReport {
+  market: string;
+  expectedInterval: HistoryInterval;
+  totalBars: number;
+  duplicateBars: number;
+  missingBars: number;
+  invalidBars: number;
+  stale: boolean;
+  issues: DataQualityIssue[];
+}
+
 export interface HistoryResponse {
   instrument: Instrument;
   range: HistoryRange;
@@ -31,6 +49,7 @@ export interface HistoryResponse {
   bars: Bar[];
   source: 'live' | 'cache' | 'demo' | string;
   warning?: ApiWarning;
+  quality?: DataQualityReport;
 }
 
 export interface StrategyParameter {

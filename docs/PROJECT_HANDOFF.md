@@ -193,17 +193,7 @@ Status: completed. The backend now exposes `/api/strategies` and `/api/backtest/
 
 ### Phase 10: Data Quality and Market Calendar
 
-Goal: make historical data trustworthy enough for serious research.
-
-Scope:
-
-- Add trading calendar support for US and CN markets.
-- Add adjusted-price handling for split/dividend effects where source data supports it.
-- Detect missing bars, duplicate bars, invalid OHLC values, and stale local cache entries.
-- Add index data, industry classification, and configurable symbol universes for A-share and US-market research.
-- Add a background/manual data refresh command for local SQLite history.
-
-Why next: poor data quality can invalidate otherwise correct strategy logic.
+Status: completed. `HistoryResponse` now includes a `quality` report with duplicate-bar, missing US/CN weekday daily-bar, invalid OHLC, and stale-series checks. The frontend renders a data-quality panel beside the chart workflow so backtest inputs can be reviewed before trusting strategy results. Remaining deeper data work includes adjusted-price/corporate-action handling, symbol universes, and scheduled refresh jobs.
 
 ### Phase 11: Paper Trading Layer
 
