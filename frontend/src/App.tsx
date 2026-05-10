@@ -17,7 +17,7 @@ import {
 } from '@arco-design/web-react';
 import { IconDashboard, IconDelete, IconPlus, IconStar, IconSync } from '@arco-design/web-react/icon';
 
-import { ApiError, getBacktest, getHealth, getHistory, getIndicators, getQuote, importHistoryCsv, searchSymbols } from './api/client';
+import { ApiError, getBacktest, getHealth, getHistory, getIndicators, getPortfolioBacktest, getQuote, importHistoryCsv, searchSymbols } from './api/client';
 import type {
   BacktestResponse,
   HealthResponse,
@@ -26,6 +26,7 @@ import type {
   HistoryResponse,
   IndicatorsResponse,
   Instrument,
+  PortfolioBacktestResponse,
   Quote
 } from './api/types';
 import EquityCurveChart from './components/EquityCurveChart';
@@ -91,6 +92,7 @@ export default function App() {
   const [history, setHistory] = useState<HistoryResponse | null>(null);
   const [indicators, setIndicators] = useState<IndicatorsResponse | null>(null);
   const [backtest, setBacktest] = useState<BacktestResponse | null>(null);
+  const [portfolioBacktest, setPortfolioBacktest] = useState<PortfolioBacktestResponse | null>(null);
   const [range, setRange] = useState<HistoryRange>('1y');
   const [interval, setInterval] = useState<HistoryInterval>('1d');
   const [searchLoading, setSearchLoading] = useState(false);
@@ -98,8 +100,10 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const [backtestError, setBacktestError] = useState<string | null>(null);
+  const [portfolioBacktestError, setPortfolioBacktestError] = useState<string | null>(null);
   const [importLoading, setImportLoading] = useState(false);
   const [backtestLoading, setBacktestLoading] = useState(false);
+  const [portfolioBacktestLoading, setPortfolioBacktestLoading] = useState(false);
   const [refreshToken, setRefreshToken] = useState(0);
   const [fastWindow, setFastWindow] = useState(5);
   const [slowWindow, setSlowWindow] = useState(20);
@@ -217,6 +221,43 @@ export default function App() {
       cancelled = true;
     };
   }, [selected, range, interval, fastWindow, slowWindow, initialCapital, feeRatePct, slippagePct, refreshToken]);
+
+  const portfolioSymbols = useMemo(() => watchlist.map((item) => item.symbol), [watchlist]);
+
+  useEffect(() => {
+    if (portfolioSymbols.length < 2) {
+      setPortfolioBacktest(null);
+      setPortfolioBacktestError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setPortfolioBacktestLoading(true);
+    setPortfolioBacktestError(null);
+
+    getPortfolioBacktest({
+      symbols: portfolioSymbols,
+      range,
+      interval,
+      initialCapital
+    })
+      .then((nextBacktest) => {
+        if (!cancelled) setPortfolioBacktest(nextBacktest);
+      })
+      .catch((dataError) => {
+        if (!cancelled) {
+          setPortfolioBacktest(null);
+          setPortfolioBacktestError(errorMessage(dataError));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setPortfolioBacktestLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [portfolioSymbols, range, interval, initialCapital, refreshToken]);
 
   const handleCsvImport = useCallback(async (file: File | undefined) => {
     if (!file || !selected) return;
@@ -565,6 +606,69 @@ export default function App() {
             ) : (
               <Empty description="暂无回测结果" />
             )}
+            </Spin>
+          </Card>
+
+          <Card bordered={false} className="panel backtest-panel">
+            <div className="indicator-toolbar">
+              <Space wrap>
+                <Text bold>组合回测</Text>
+                <Tag>等权</Tag>
+                <Tag>{portfolioSymbols.length} symbols</Tag>
+              </Space>
+              <Tag color={portfolioBacktest ? 'arcoblue' : 'gray'}>{portfolioBacktest?.allocation ?? 'portfolio'}</Tag>
+            </div>
+            <Spin loading={portfolioBacktestLoading} block>
+              {portfolioBacktestError && (
+                <Alert
+                  className="backtest-alert"
+                  type="error"
+                  title="组合回测失败"
+                  content={portfolioBacktestError}
+                  showIcon
+                />
+              )}
+              {portfolioBacktest ? (
+                <>
+                  <div className="indicator-summary">
+                    <Card size="small" bordered={false} className="indicator-card">
+                      <Text type="secondary">组合权益</Text>
+                      <Title heading={6}>{portfolioBacktest.summary.finalEquity}</Title>
+                      <Text type="secondary">初始 {portfolioBacktest.summary.initialCapital}</Text>
+                    </Card>
+                    <Card size="small" bordered={false} className="indicator-card">
+                      <Text type="secondary">组合收益</Text>
+                      <Title heading={6}>{portfolioBacktest.summary.totalReturnPct}%</Title>
+                      <Text type="secondary">标的数 {portfolioBacktest.summary.symbolCount}</Text>
+                    </Card>
+                    <Card size="small" bordered={false} className="indicator-card">
+                      <Text type="secondary">贡献</Text>
+                      <Title heading={6}>{portfolioBacktest.summary.bestSymbol}</Title>
+                      <Text type="secondary">最弱 {portfolioBacktest.summary.worstSymbol}</Text>
+                    </Card>
+                  </div>
+                  {portfolioBacktest.equityCurve.length > 0 && <EquityCurveChart points={portfolioBacktest.equityCurve} />}
+                  <List
+                    size="small"
+                    className="backtest-trades"
+                    dataSource={portfolioBacktest.positions}
+                    noDataElement={<Empty description="暂无组合持仓" />}
+                    render={(position) => (
+                      <List.Item key={position.symbol}>
+                        <Space wrap>
+                          <Tag>{position.symbol}</Tag>
+                          <Text>{position.name}</Text>
+                          <Text type="secondary">weight {position.weightPct}%</Text>
+                          <Text type="secondary">return {position.returnPct}%</Text>
+                          <Text type="secondary">value {position.marketValue}</Text>
+                        </Space>
+                      </List.Item>
+                    )}
+                  />
+                </>
+              ) : (
+                <Empty description="自选股至少需要 2 个标的才能运行组合回测" />
+              )}
             </Spin>
           </Card>
 

@@ -5,8 +5,8 @@ import { buildEquityCurveDataset } from './EquityCurveChart';
 describe('EquityCurveChart', () => {
   it('maps equity points to categories and values', () => {
     const dataset = buildEquityCurveDataset([
-      { time: '2024-01-01', equity: 1000, cash: 1000, position: 0, price: 10 },
-      { time: '2024-01-02', equity: 1010, cash: 0, position: 100, price: 10.1 }
+      { time: '2024-01-01', equity: 1000 },
+      { time: '2024-01-02', equity: 1010 }
     ]);
 
     expect(dataset.categories).toEqual(['2024-01-01', '2024-01-02']);

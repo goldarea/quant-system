@@ -114,6 +114,40 @@ export interface BacktestResponse {
   benchmark: BacktestBenchmark;
 }
 
+export interface PortfolioPosition {
+  symbol: string;
+  name: string;
+  quantity: number;
+  price: number;
+  marketValue: number;
+  weightPct: number;
+  returnPct: number;
+}
+
+export interface PortfolioEquityPoint {
+  time: string;
+  equity: number;
+}
+
+export interface PortfolioBacktestSummary {
+  initialCapital: number;
+  finalEquity: number;
+  totalReturnPct: number;
+  symbolCount: number;
+  bestSymbol: string;
+  worstSymbol: string;
+}
+
+export interface PortfolioBacktestResponse {
+  symbols: string[];
+  range: HistoryRange;
+  interval: HistoryInterval;
+  allocation: string;
+  summary: PortfolioBacktestSummary;
+  equityCurve: PortfolioEquityPoint[];
+  positions: PortfolioPosition[];
+}
+
 export interface HistoryImportResponse {
   instrument: Instrument;
   range: HistoryRange;

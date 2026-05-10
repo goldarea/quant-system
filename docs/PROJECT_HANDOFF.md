@@ -184,17 +184,7 @@ Status: completed. The `/api/backtest` response now includes daily returns, annu
 
 ### Phase 8: Multi-symbol Portfolio Backtesting
 
-Goal: move from single-symbol signal inspection to portfolio-level research.
-
-Scope:
-
-- Allow a backtest request to include multiple symbols or a watchlist selection.
-- Support simple portfolio allocation modes such as equal weight and signal-weighted exposure.
-- Track cash, positions, daily portfolio equity, and per-symbol contribution.
-- Show portfolio holdings, rebalance records, and combined equity curve in the frontend.
-- Add tests for multi-symbol alignment, missing bars, and cash/position accounting.
-
-Why next: mature quant systems evaluate strategies at portfolio level rather than isolated single-stock trades.
+Status: completed. The backend now exposes `/api/backtest/portfolio` for equal-weight multi-symbol backtests over aligned bar times. The response includes combined equity, final positions, weights, per-symbol returns, best/worst symbols, and portfolio summary metrics. The frontend runs this against the browser-local watchlist when at least two symbols are present and renders the combined equity curve plus final holdings.
 
 ### Phase 9: Strategy Framework
 

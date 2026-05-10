@@ -45,6 +45,7 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 - `POST /api/history/import?symbol=AAPL&range=1mo&interval=1d`
 - `GET /api/quote?symbol=AAPL`
 - `GET /api/backtest?symbol=AAPL&range=1mo&interval=1d&feeRatePct=0.1&slippagePct=0.2`
+- `GET /api/backtest/portfolio?symbols=AAPL,MSFT&range=1mo&interval=1d`
 
 ## Backtesting
 

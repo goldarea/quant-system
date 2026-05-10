@@ -119,6 +119,7 @@ Routes:
 - `GET /api/quote?symbol=AAPL`
 - `GET /api/indicators?symbol=AAPL&range=1y&interval=1d`
 - `GET /api/backtest?symbol=AAPL&range=1y&interval=1d&feeRatePct=0.1&slippagePct=0.2`
+- `GET /api/backtest/portfolio?symbols=AAPL,MSFT&range=1y&interval=1d`
 
 Starter symbols include common US stocks, major ETFs, and common A-share
 symbols. The dashboard also includes a browser-local watchlist stored in
@@ -131,10 +132,12 @@ backtest. Users can tune fast/slow MA windows, initial capital, fee rate, and
 slippage, inspect the equity curve, review recent trades, and see buy/sell
 markers overlaid on the K-line chart. The backtest report includes annualized
 return, annualized volatility, Sharpe, Calmar, drawdown period, trade-quality
-metrics, and a buy-and-hold benchmark comparison. The backtest uses current
-close prices, applies percentage fees and slippage deterministically, does not
-short sell, and does not persist strategy runs; it is intended as a first local
-analysis baseline.
+metrics, and a buy-and-hold benchmark comparison. The dashboard also runs an
+equal-weight portfolio backtest for browser-local watchlist symbols, showing
+combined equity, final positions, weights, and per-symbol returns. The backtest
+uses current close prices, applies percentage fees and slippage deterministically,
+does not short sell, and does not persist strategy runs; it is intended as a
+first local analysis baseline.
 
 If an upstream provider is unavailable, the backend can return deterministic
 demo bars marked with `source: "demo"` so the UI remains usable. Successful live

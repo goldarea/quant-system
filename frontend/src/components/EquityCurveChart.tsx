@@ -2,7 +2,10 @@ import { useEffect, useMemo, useRef } from 'react';
 import * as echarts from 'echarts';
 import type { EChartsOption } from 'echarts';
 
-import type { BacktestEquityPoint } from '../api/types';
+export interface EquityPoint {
+  time: string;
+  equity: number;
+}
 
 export interface EquityCurveDataset {
   categories: string[];
@@ -10,10 +13,10 @@ export interface EquityCurveDataset {
 }
 
 interface EquityCurveChartProps {
-  points: BacktestEquityPoint[];
+  points: EquityPoint[];
 }
 
-export function buildEquityCurveDataset(points: BacktestEquityPoint[]): EquityCurveDataset {
+export function buildEquityCurveDataset(points: EquityPoint[]): EquityCurveDataset {
   return {
     categories: points.map((point) => point.time),
     equity: points.map((point) => point.equity)

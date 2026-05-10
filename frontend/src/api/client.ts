@@ -8,6 +8,7 @@ import type {
   HistoryResponse,
   IndicatorsResponse,
   Instrument,
+  PortfolioBacktestResponse,
   Quote
 } from './types';
 
@@ -29,6 +30,13 @@ interface BacktestParams extends HistoryParams {
   initialCapital?: number;
   feeRatePct?: number;
   slippagePct?: number;
+}
+
+interface PortfolioBacktestParams {
+  symbols: string[];
+  range: HistoryRange;
+  interval: HistoryInterval;
+  initialCapital?: number;
 }
 
 export class ApiError extends Error {
@@ -99,6 +107,15 @@ export function getBacktest(params: BacktestParams, options?: ClientOptions) {
     ['initialCapital', params.initialCapital?.toString()],
     ['feeRatePct', params.feeRatePct?.toString()],
     ['slippagePct', params.slippagePct?.toString()]
+  ])}`, options);
+}
+
+export function getPortfolioBacktest(params: PortfolioBacktestParams, options?: ClientOptions) {
+  return request<PortfolioBacktestResponse>(`/api/backtest/portfolio?${buildQuery([
+    ['symbols', params.symbols.join(',')],
+    ['range', params.range],
+    ['interval', params.interval],
+    ['initialCapital', params.initialCapital?.toString()]
   ])}`, options);
 }
 

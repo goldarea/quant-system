@@ -8,6 +8,7 @@ from app.models import ApiError, HealthResponse, HistoryImportResponse
 from app.services.backtest import run_ma_crossover_backtest
 from app.services.csv_import import parse_history_csv
 from app.services.indicators import build_indicators
+from app.services.portfolio_backtest import run_equal_weight_portfolio_backtest
 from app.services.market_data import MarketDataService
 
 
@@ -95,6 +96,19 @@ def backtest(
         feeRatePct,
         slippagePct,
     ))
+
+
+@app.get("/api/backtest/portfolio")
+def portfolio_backtest(
+    symbols: str = Query(default=""),
+    range: str = Query(default="1y"),
+    interval: str = Query(default="1d"),
+    initialCapital: float = Query(default=100000),
+):
+    symbol_list = [symbol.strip().upper() for symbol in symbols.split(",") if symbol.strip()]
+    histories = [service.get_history(symbol, range, interval) for symbol in symbol_list]
+    range_value, interval_value = service.validate_history_options(range, interval)
+    return ok(run_equal_weight_portfolio_backtest(histories, range_value, interval_value, initialCapital))
 
 
 @app.get("/api/quote")

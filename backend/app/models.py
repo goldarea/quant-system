@@ -168,6 +168,40 @@ class BacktestResponse(BaseModel):
     benchmark: BacktestBenchmark
 
 
+class PortfolioPosition(BaseModel):
+    symbol: str
+    name: str
+    quantity: float
+    price: float
+    marketValue: float
+    weightPct: float
+    returnPct: float
+
+
+class PortfolioEquityPoint(BaseModel):
+    time: str
+    equity: float
+
+
+class PortfolioBacktestSummary(BaseModel):
+    initialCapital: float
+    finalEquity: float
+    totalReturnPct: float
+    symbolCount: int
+    bestSymbol: str
+    worstSymbol: str
+
+
+class PortfolioBacktestResponse(BaseModel):
+    symbols: list[str]
+    range: HistoryRange
+    interval: HistoryInterval
+    allocation: str
+    summary: PortfolioBacktestSummary
+    equityCurve: list[PortfolioEquityPoint]
+    positions: list[PortfolioPosition]
+
+
 class IndicatorPoint(BaseModel):
     time: str
     value: float | None = None

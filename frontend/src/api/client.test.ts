@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { ApiError, getBacktest, getHistory, searchSymbols } from './client';
+import { ApiError, getBacktest, getHistory, getPortfolioBacktest, searchSymbols } from './client';
 
 describe('api client', () => {
   it('unwraps successful API envelopes', async () => {
@@ -66,5 +66,36 @@ describe('api client', () => {
     }, { fetcher });
 
     expect(fetcher).toHaveBeenCalledWith('/api/backtest?symbol=AAPL&range=1y&interval=1d&fastWindow=8&slowWindow=21&initialCapital=50000&feeRatePct=0.1&slippagePct=0.2');
+  });
+
+  it('includes portfolio backtest parameters', async () => {
+    const fetcher = vi.fn(async () => new Response(JSON.stringify({
+      ok: true,
+      data: {
+        symbols: ['AAPL', 'MSFT'],
+        range: '1y',
+        interval: '1d',
+        allocation: 'equal_weight',
+        summary: {
+          initialCapital: 100000,
+          finalEquity: 110000,
+          totalReturnPct: 10,
+          symbolCount: 2,
+          bestSymbol: 'AAPL',
+          worstSymbol: 'MSFT'
+        },
+        equityCurve: [],
+        positions: []
+      }
+    })));
+
+    await getPortfolioBacktest({
+      symbols: ['AAPL', 'MSFT'],
+      range: '1y',
+      interval: '1d',
+      initialCapital: 100000
+    }, { fetcher });
+
+    expect(fetcher).toHaveBeenCalledWith('/api/backtest/portfolio?symbols=AAPL%2CMSFT&range=1y&interval=1d&initialCapital=100000');
   });
 });
