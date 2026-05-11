@@ -159,8 +159,9 @@ series; the dashboard renders these checks in a data-quality panel.
 
 The dashboard also includes a local paper-trading panel backed by simulated
 cash, positions, orders, and fills. Market paper orders execute against the
-latest quote, apply buying-power and position-quantity checks, and remain local
-to the FastAPI process; no real broker integration is performed.
+latest quote, apply buying-power, single-order value, single-position value, and
+position-quantity checks, and remain local to the FastAPI process; no real broker
+integration is performed.
 
 CSV imports can be sent from the dashboard or posted as `text/csv` to
 `/api/history/import`. Required headers are `time,open,high,low,close,volume`;
@@ -181,6 +182,7 @@ priority is:
 4. Data quality checks are in place for duplicate bars, missing US/CN weekday
    daily bars, invalid OHLC values, and stale history series.
 5. Paper trading is in place with simulated cash, market orders, fills,
-   positions, buying-power checks, and a dashboard account panel.
+   positions, buying-power checks, pre-trade risk limits, and a dashboard account
+   panel.
 6. Parameter sweep is in place for MA crossover fast/slow window result
    comparison.

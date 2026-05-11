@@ -9,6 +9,8 @@ from app.models import (
     PaperOrder,
     PaperOrderRequest,
     PaperPosition,
+    PaperRiskLimits,
+    PaperRiskStatus,
     Quote,
     ValidationApiError,
 )
@@ -19,8 +21,10 @@ def _round(value: float) -> float:
 
 
 class PaperTradingService:
-    def __init__(self, initial_cash: float = 100000) -> None:
+    def __init__(self, initial_cash: float = 100000, max_order_value_pct: float = 25, max_position_value_pct: float = 50) -> None:
         self.initial_cash = float(initial_cash)
+        self.max_order_value_pct = float(max_order_value_pct)
+        self.max_position_value_pct = float(max_position_value_pct)
         self.cash = float(initial_cash)
         self.realized_pnl = 0.0
         self.positions: dict[str, PaperPosition] = {}
@@ -52,6 +56,16 @@ class PaperTradingService:
             positions=positions,
             orders=self.orders[-20:][::-1],
             fills=self.fills[-20:][::-1],
+            risk=PaperRiskStatus(
+                grossExposure=_round(market_value),
+                grossExposurePct=_round((market_value / equity) * 100) if equity > 0 else 0,
+                maxOrderValue=_round(equity * self.max_order_value_pct / 100),
+                maxPositionValue=_round(equity * self.max_position_value_pct / 100),
+                limits=PaperRiskLimits(
+                    maxOrderValuePct=_round(self.max_order_value_pct),
+                    maxPositionValuePct=_round(self.max_position_value_pct),
+                ),
+            ),
         )
 
     def submit_order(self, request: PaperOrderRequest, instrument: Instrument, quote: Quote) -> PaperAccountResponse:
@@ -96,11 +110,21 @@ class PaperTradingService:
     def _fill_order(self, order: PaperOrder, price: float, time: str) -> None:
         value = order.quantity * price
         existing = self.positions.get(order.symbol)
+        equity = self.cash + sum(position.marketValue for position in self.positions.values())
 
         if order.side == "buy":
             if value > self.cash:
                 order.status = "rejected"
                 order.message = "Insufficient buying power"
+                return
+            if value > equity * self.max_order_value_pct / 100:
+                order.status = "rejected"
+                order.message = "Order value exceeds risk limit"
+                return
+            existing_market_value = existing.marketValue if existing else 0.0
+            if existing_market_value + value > equity * self.max_position_value_pct / 100:
+                order.status = "rejected"
+                order.message = "Position value exceeds risk limit"
                 return
             previous_quantity = existing.quantity if existing else 0.0
             previous_cost = existing.averageCost if existing else 0.0

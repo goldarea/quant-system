@@ -151,7 +151,14 @@ describe('api client', () => {
         account: { accountId: 'paper-default', cash: 1000, equity: 1000, buyingPower: 1000, realizedPnl: 0, unrealizedPnl: 0 },
         positions: [],
         orders: [],
-        fills: []
+        fills: [],
+        risk: {
+          grossExposure: 0,
+          grossExposurePct: 0,
+          maxOrderValue: 250,
+          maxPositionValue: 500,
+          limits: { maxOrderValuePct: 25, maxPositionValuePct: 50 }
+        }
       }
     })));
 

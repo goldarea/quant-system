@@ -931,6 +931,8 @@ export default function App() {
                 <Text bold>Paper Trading</Text>
                 <Tag>{selected?.symbol ?? 'symbol'}</Tag>
                 <Tag>{paperAccount?.account.accountId ?? 'paper-default'}</Tag>
+                {paperAccount && <Tag color="orange">Order ≤ {paperAccount.risk.limits.maxOrderValuePct}%</Tag>}
+                {paperAccount && <Tag color="orange">Position ≤ {paperAccount.risk.limits.maxPositionValuePct}%</Tag>}
               </Space>
               <Button size="small" loading={paperLoading} onClick={() => void resetPaper()}>重置账户</Button>
             </div>
@@ -977,6 +979,16 @@ export default function App() {
                       <Text type="secondary">浮动盈亏</Text>
                       <Title heading={6}>{paperAccount.account.unrealizedPnl}</Title>
                       <Text type="secondary">持仓 {paperAccount.positions.length}</Text>
+                    </Card>
+                    <Card size="small" bordered={false} className="indicator-card">
+                      <Text type="secondary">风险暴露</Text>
+                      <Title heading={6}>{paperAccount.risk.grossExposurePct}%</Title>
+                      <Text type="secondary">市值 {paperAccount.risk.grossExposure}</Text>
+                    </Card>
+                    <Card size="small" bordered={false} className="indicator-card">
+                      <Text type="secondary">下单风控</Text>
+                      <Title heading={6}>{paperAccount.risk.maxOrderValue}</Title>
+                      <Text type="secondary">单标的上限 {paperAccount.risk.maxPositionValue}</Text>
                     </Card>
                   </div>
                   <List

@@ -332,11 +332,25 @@ class PaperFill(BaseModel):
     time: str
 
 
+class PaperRiskLimits(BaseModel):
+    maxOrderValuePct: float
+    maxPositionValuePct: float
+
+
+class PaperRiskStatus(BaseModel):
+    grossExposure: float
+    grossExposurePct: float
+    maxOrderValue: float
+    maxPositionValue: float
+    limits: PaperRiskLimits
+
+
 class PaperAccountResponse(BaseModel):
     account: PaperAccountSummary
     positions: list[PaperPosition]
     orders: list[PaperOrder]
     fills: list[PaperFill]
+    risk: PaperRiskStatus
 
 
 class PaperOrderRequest(BaseModel):

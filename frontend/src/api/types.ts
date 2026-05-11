@@ -299,11 +299,25 @@ export interface PaperFill {
   time: string;
 }
 
+export interface PaperRiskLimits {
+  maxOrderValuePct: number;
+  maxPositionValuePct: number;
+}
+
+export interface PaperRiskStatus {
+  grossExposure: number;
+  grossExposurePct: number;
+  maxOrderValue: number;
+  maxPositionValue: number;
+  limits: PaperRiskLimits;
+}
+
 export interface PaperAccountResponse {
   account: PaperAccountSummary;
   positions: PaperPosition[];
   orders: PaperOrder[];
   fills: PaperFill[];
+  risk: PaperRiskStatus;
 }
 
 export interface PaperOrderRequest {

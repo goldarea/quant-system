@@ -87,9 +87,11 @@ provider anomalies before a strategy result is trusted.
 The paper-trading API keeps one in-memory simulated account for the local
 FastAPI process. `POST /api/paper/orders` accepts market buy/sell orders,
 executes them against the latest quote, records orders and fills, updates
-positions, and rejects orders that exceed buying power or available quantity.
-`POST /api/paper/reset` restores the default cash-only account. No broker API or
-real execution is involved.
+positions, and rejects orders that exceed buying power, available quantity,
+single-order value limits, or single-position value limits. Account snapshots
+include risk status with gross exposure and active limit values. `POST /api/paper/reset`
+restores the default cash-only account. No broker API or real execution is
+involved.
 
 ## Data Providers
 
