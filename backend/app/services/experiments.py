@@ -1,8 +1,12 @@
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from app.models import BacktestResponse, ExperimentRun, HistoryInterval, HistoryRange
+from app.models import BacktestResponse, ExperimentRun, HistoryInterval, HistoryRange, ValidationApiError
 from app.storage import HistoryStore
+
+
+_SORT_FIELDS = {"time", "totalReturnPct", "sharpeRatio", "maxDrawdownPct", "finalEquity", "tradeCount", "winRatePct"}
+_SORT_DIRECTIONS = {"asc", "desc"}
 
 
 class ExperimentService:
@@ -40,8 +44,18 @@ class ExperimentService:
         self.store.add_experiment_run(run)
         return run
 
-    def list_runs(self) -> list[ExperimentRun]:
-        return self.store.list_experiment_runs(self.max_runs)
+    def list_runs(
+        self,
+        strategy: str | None = None,
+        symbol: str | None = None,
+        sort_by: str = "time",
+        sort_dir: str = "desc",
+    ) -> list[ExperimentRun]:
+        if sort_by not in _SORT_FIELDS:
+            raise ValidationApiError(f"Unsupported experiment sort field: {sort_by}")
+        if sort_dir not in _SORT_DIRECTIONS:
+            raise ValidationApiError(f"Unsupported experiment sort direction: {sort_dir}")
+        return self.store.list_experiment_runs(self.max_runs, strategy, symbol, sort_by, sort_dir)
 
     def delete_run(self, run_id: str) -> list[ExperimentRun]:
         self.store.delete_experiment_run(run_id)

@@ -66,9 +66,11 @@ the selected strategy; registered strategies are `ma_crossover`, `rsi_reversal`,
 available as the compatibility endpoint for MA crossover. Successful strategy
 runs are stored in the local SQLite experiment ledger;
 `GET /api/experiments/runs` returns recent run summaries with strategy, symbol,
-parameters, source, and headline performance metrics. Individual runs can be
-removed with `DELETE /api/experiments/runs/{id}`, and all local experiment runs
-can be cleared with `DELETE /api/experiments/runs`.
+parameters, source, and headline performance metrics. It accepts optional
+`strategy`, `symbol`, `sortBy`, and `sortDir` query parameters for server-side
+filtering and ranking. Individual runs can be removed with
+`DELETE /api/experiments/runs/{id}`, and all local experiment runs can be cleared
+with `DELETE /api/experiments/runs`.
 
 `GET /api/backtest` runs a minimal long-only moving-average crossover backtest on
 the same bars returned by `/api/history`. Query params include `fastWindow`,

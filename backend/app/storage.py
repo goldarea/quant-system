@@ -197,18 +197,48 @@ class HistoryStore:
             connection.commit()
             return cursor.rowcount
 
-    def list_experiment_runs(self, limit: int = 50) -> list[ExperimentRun]:
+    def list_experiment_runs(
+        self,
+        limit: int = 50,
+        strategy: str | None = None,
+        symbol: str | None = None,
+        sort_by: str = "time",
+        sort_dir: str = "desc",
+    ) -> list[ExperimentRun]:
+        sort_columns = {
+            "time": "saved_at",
+            "totalReturnPct": "total_return_pct",
+            "sharpeRatio": "sharpe_ratio",
+            "maxDrawdownPct": "max_drawdown_pct",
+            "finalEquity": "final_equity",
+            "tradeCount": "trade_count",
+            "winRatePct": "win_rate_pct",
+        }
+        order_column = sort_columns.get(sort_by, "saved_at")
+        order_direction = "ASC" if sort_dir == "asc" else "DESC"
+        conditions = []
+        values: list[str | int] = []
+        if strategy:
+            conditions.append("strategy = ?")
+            values.append(strategy)
+        if symbol:
+            conditions.append("symbol = ?")
+            values.append(symbol.upper())
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        values.append(limit)
+
         with self._connect() as connection:
             rows = connection.execute(
-                """
+                f"""
                 SELECT id, time, strategy, symbol, range_value, interval, source,
                   parameters_json, final_equity, total_return_pct, max_drawdown_pct,
                   sharpe_ratio, trade_count, win_rate_pct
                 FROM experiment_runs
-                ORDER BY saved_at DESC, time DESC
+                {where_clause}
+                ORDER BY {order_column} {order_direction}, saved_at DESC, time DESC
                 LIMIT ?
                 """,
-                (limit,),
+                values,
             ).fetchall()
 
         return [

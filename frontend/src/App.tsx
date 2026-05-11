@@ -126,6 +126,8 @@ export default function App() {
   const [portfolioBacktestLoading, setPortfolioBacktestLoading] = useState(false);
   const [experimentLoading, setExperimentLoading] = useState(false);
   const [experimentFilter, setExperimentFilter] = useState('');
+  const [experimentSortBy, setExperimentSortBy] = useState('time');
+  const [experimentSortDir, setExperimentSortDir] = useState<'asc' | 'desc'>('desc');
   const [paperLoading, setPaperLoading] = useState(false);
   const [refreshToken, setRefreshToken] = useState(0);
   const [visibleAverages, setVisibleAverages] = useState({ ma5: true, ma20: true, ma60: false });
@@ -146,13 +148,6 @@ export default function App() {
     () => JSON.stringify(strategyParameters),
     [strategyParameters]
   );
-
-  const filteredExperimentRuns = useMemo(() => {
-    const normalized = experimentFilter.trim().toLowerCase();
-    if (!normalized) return experimentRuns;
-    return experimentRuns.filter((run) => [run.strategy, run.symbol, run.range, run.interval]
-      .some((value) => value.toLowerCase().includes(normalized)));
-  }, [experimentFilter, experimentRuns]);
 
   const selectedInWatchlist = selected ? watchlist.some((item) => item.symbol === selected.symbol) : false;
 
@@ -214,13 +209,19 @@ export default function App() {
     setExperimentLoading(true);
     setExperimentError(null);
     try {
-      setExperimentRuns(await getExperimentRuns());
+      const normalizedFilter = experimentFilter.trim().toUpperCase();
+      setExperimentRuns(await getExperimentRuns({
+        strategy: strategies.some((strategy) => strategy.id === experimentFilter.trim()) ? experimentFilter.trim() : undefined,
+        symbol: normalizedFilter || undefined,
+        sortBy: experimentSortBy,
+        sortDir: experimentSortDir
+      }));
     } catch (runsError) {
       setExperimentError(errorMessage(runsError));
     } finally {
       setExperimentLoading(false);
     }
-  }, []);
+  }, [experimentFilter, experimentSortBy, experimentSortDir, strategies]);
 
   useEffect(() => {
     getHealth()
@@ -878,12 +879,37 @@ export default function App() {
                 <Space wrap>
                   <Input
                     size="small"
-                    placeholder="筛选 strategy / symbol / range"
+                    placeholder="筛选 strategy id 或 symbol"
                     value={experimentFilter}
                     onChange={setExperimentFilter}
-                    style={{ width: 240 }}
+                    style={{ width: 220 }}
                   />
-                  <Tag>{filteredExperimentRuns.length} shown</Tag>
+                  <Select
+                    size="small"
+                    value={experimentSortBy}
+                    style={{ width: 160 }}
+                    onChange={setExperimentSortBy}
+                    options={[
+                      { label: '时间', value: 'time' },
+                      { label: '收益', value: 'totalReturnPct' },
+                      { label: 'Sharpe', value: 'sharpeRatio' },
+                      { label: '回撤', value: 'maxDrawdownPct' },
+                      { label: '权益', value: 'finalEquity' },
+                      { label: '交易数', value: 'tradeCount' },
+                      { label: '胜率', value: 'winRatePct' }
+                    ]}
+                  />
+                  <Radio.Group
+                    type="button"
+                    size="small"
+                    value={experimentSortDir}
+                    onChange={setExperimentSortDir}
+                    options={[{ label: '降序', value: 'desc' }, { label: '升序', value: 'asc' }]}
+                  />
+                  <Button size="small" onClick={() => void refreshExperimentRuns()}>
+                    应用
+                  </Button>
+                  <Tag>{experimentRuns.length} shown</Tag>
                 </Space>
               </div>
               {experimentError && (
@@ -898,7 +924,7 @@ export default function App() {
               <List
                 size="small"
                 className="backtest-trades"
-                dataSource={filteredExperimentRuns.slice(0, 8)}
+                dataSource={experimentRuns.slice(0, 8)}
                 noDataElement={<Empty description="暂无实验记录，运行策略回测后自动保存摘要" />}
                 render={(run) => (
                   <List.Item key={run.id}>

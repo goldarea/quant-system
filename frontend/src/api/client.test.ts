@@ -201,9 +201,9 @@ describe('api client', () => {
       }]
     })));
 
-    const result = await getExperimentRuns({ fetcher });
+    const result = await getExperimentRuns({ strategy: 'ma_crossover', symbol: 'AAPL', sortBy: 'totalReturnPct', sortDir: 'desc' }, { fetcher });
 
-    expect(fetcher).toHaveBeenCalledWith('/api/experiments/runs');
+    expect(fetcher).toHaveBeenCalledWith('/api/experiments/runs?strategy=ma_crossover&symbol=AAPL&sortBy=totalReturnPct&sortDir=desc');
     expect(result[0].strategy).toBe('ma_crossover');
   });
 

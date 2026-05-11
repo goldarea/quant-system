@@ -96,6 +96,66 @@ def test_experiment_runs_respect_limit_and_newest_first(tmp_path):
     assert [run.id for run in loaded] == ["run-2", "run-1"]
 
 
+def test_experiment_runs_filter_and_sort(tmp_path):
+    store = HistoryStore(tmp_path / "history.sqlite3")
+    runs = [
+        ExperimentRun(
+            id="run-low",
+            time="2024-01-01T00:00:00Z",
+            strategy="ma_crossover",
+            symbol="AAPL",
+            range="1mo",
+            interval="1d",
+            source="local",
+            parameters={},
+            finalEquity=101000,
+            totalReturnPct=1,
+            maxDrawdownPct=2,
+            sharpeRatio=0.5,
+            tradeCount=1,
+            winRatePct=50,
+        ),
+        ExperimentRun(
+            id="run-high",
+            time="2024-01-02T00:00:00Z",
+            strategy="ma_crossover",
+            symbol="AAPL",
+            range="1mo",
+            interval="1d",
+            source="local",
+            parameters={},
+            finalEquity=110000,
+            totalReturnPct=10,
+            maxDrawdownPct=4,
+            sharpeRatio=1.5,
+            tradeCount=3,
+            winRatePct=66,
+        ),
+        ExperimentRun(
+            id="run-other",
+            time="2024-01-03T00:00:00Z",
+            strategy="buy_and_hold",
+            symbol="MSFT",
+            range="1mo",
+            interval="1d",
+            source="local",
+            parameters={},
+            finalEquity=105000,
+            totalReturnPct=5,
+            maxDrawdownPct=1,
+            sharpeRatio=2,
+            tradeCount=1,
+            winRatePct=100,
+        ),
+    ]
+    for run in runs:
+        store.add_experiment_run(run)
+
+    loaded = store.list_experiment_runs(strategy="ma_crossover", symbol="aapl", sort_by="totalReturnPct", sort_dir="desc")
+
+    assert [run.id for run in loaded] == ["run-high", "run-low"]
+
+
 def test_experiment_runs_delete_one_and_clear_all(tmp_path):
     store = HistoryStore(tmp_path / "history.sqlite3")
     for index in range(2):

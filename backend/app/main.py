@@ -137,8 +137,13 @@ def strategy_backtest(
 
 
 @app.get("/api/experiments/runs")
-def experiment_runs():
-    return ok(experiment_service.list_runs())
+def experiment_runs(
+    strategy: str | None = Query(default=None),
+    symbol: str | None = Query(default=None),
+    sortBy: str = Query(default="time"),
+    sortDir: str = Query(default="desc"),
+):
+    return ok(experiment_service.list_runs(strategy, symbol, sortBy, sortDir))
 
 
 @app.delete("/api/experiments/runs/{run_id}")

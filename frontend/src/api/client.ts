@@ -53,6 +53,13 @@ interface StrategyBacktestParams extends HistoryParams {
   parameters: Record<string, number | string>;
 }
 
+interface ExperimentRunParams {
+  strategy?: string;
+  symbol?: string;
+  sortBy?: string;
+  sortDir?: 'asc' | 'desc';
+}
+
 interface PortfolioBacktestParams {
   symbols: string[];
   range: HistoryRange;
@@ -160,8 +167,14 @@ export function getStrategyBacktest(params: StrategyBacktestParams, options?: Cl
   ])}`, options);
 }
 
-export function getExperimentRuns(options?: ClientOptions) {
-  return request<ExperimentRun[]>('/api/experiments/runs', options);
+export function getExperimentRuns(params: ExperimentRunParams = {}, options?: ClientOptions) {
+  const query = buildQuery([
+    ['strategy', params.strategy],
+    ['symbol', params.symbol],
+    ['sortBy', params.sortBy],
+    ['sortDir', params.sortDir]
+  ]);
+  return request<ExperimentRun[]>(`/api/experiments/runs${query ? `?${query}` : ''}`, options);
 }
 
 export function deleteExperimentRun(id: string, options?: ClientOptions) {

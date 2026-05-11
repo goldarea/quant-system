@@ -90,6 +90,48 @@ def test_experiment_runs_are_returned_newest_first(tmp_path):
         main_module.experiment_service = previous_experiment_service
 
 
+def test_experiment_runs_endpoint_filters_and_sorts(tmp_path):
+    previous_service = main_module.service
+    previous_experiment_service = main_module.experiment_service
+    main_module.service = MarketDataService(
+        providers={"US": _provider},
+        cache=JsonCache(tmp_path / "cache"),
+        history_store=HistoryStore(tmp_path / "history.sqlite3"),
+    )
+    main_module.experiment_service = ExperimentService(HistoryStore(tmp_path / "experiments.sqlite3"))
+    client = TestClient(app)
+
+    try:
+        client.get("/api/backtest/run", params={"strategy": "buy_and_hold", "symbol": "AAPL", "range": "1mo", "interval": "1d"})
+        client.get("/api/backtest/run", params={"strategy": "ma_crossover", "symbol": "MSFT", "range": "1mo", "interval": "1d", "fastWindow": 2, "slowWindow": 3})
+        response = client.get("/api/experiments/runs", params={"strategy": "ma_crossover", "symbol": "MSFT", "sortBy": "totalReturnPct", "sortDir": "asc"})
+        payload = response.json()
+
+        assert response.status_code == 200
+        assert len(payload["data"]) == 1
+        assert payload["data"][0]["strategy"] == "ma_crossover"
+        assert payload["data"][0]["symbol"] == "MSFT"
+    finally:
+        main_module.service = previous_service
+        main_module.experiment_service = previous_experiment_service
+
+
+def test_experiment_runs_endpoint_rejects_invalid_sort(tmp_path):
+    previous_experiment_service = main_module.experiment_service
+    main_module.experiment_service = ExperimentService(HistoryStore(tmp_path / "experiments.sqlite3"))
+    client = TestClient(app)
+
+    try:
+        response = client.get("/api/experiments/runs", params={"sortBy": "missing"})
+        payload = response.json()
+
+        assert response.status_code == 400
+        assert payload["ok"] is False
+        assert payload["error"]["code"] == "VALIDATION_ERROR"
+    finally:
+        main_module.experiment_service = previous_experiment_service
+
+
 def test_experiment_runs_persist_across_service_instances(tmp_path):
     database_path = tmp_path / "experiments.sqlite3"
     previous_service = main_module.service
