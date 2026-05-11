@@ -121,6 +121,7 @@ Routes:
 - `GET /api/strategies`
 - `GET /api/backtest/run?strategy=ma_crossover&symbol=AAPL&range=1y&interval=1d`
 - `GET /api/backtest?symbol=AAPL&range=1y&interval=1d&feeRatePct=0.1&slippagePct=0.2`
+- `GET /api/backtest/sweep?symbol=AAPL&range=1y&interval=1d&fastMin=3&fastMax=10&slowMin=15&slowMax=30`
 - `GET /api/backtest/portfolio?symbols=AAPL,MSFT&range=1y&interval=1d`
 - `GET /api/paper/account`
 - `POST /api/paper/orders`
@@ -136,7 +137,10 @@ The dashboard now selects backtest strategies from `/api/strategies` and renders
 parameter controls from the returned schema. Registered strategies include MA
 crossover, RSI reversal, MACD trend, and buy-and-hold; `/api/backtest/run`
 executes the selected strategy while the original `/api/backtest` route remains
-available for MA crossover compatibility. The backtest report includes annualized
+available for MA crossover compatibility. The dashboard can also run MA crossover
+parameter sweeps across fast/slow window ranges, ranking combinations by return,
+Sharpe, and drawdown so batch results can be compared without manual retuning.
+The backtest report includes annualized
 return, annualized volatility, Sharpe, Calmar, drawdown period, trade-quality
 metrics, and a buy-and-hold benchmark comparison. The dashboard also runs an
 equal-weight portfolio backtest for browser-local watchlist symbols, showing
@@ -178,3 +182,5 @@ priority is:
    daily bars, invalid OHLC values, and stale history series.
 5. Paper trading is in place with simulated cash, market orders, fills,
    positions, buying-power checks, and a dashboard account panel.
+6. Parameter sweep is in place for MA crossover fast/slow window result
+   comparison.

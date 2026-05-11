@@ -47,6 +47,7 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 - `GET /api/strategies`
 - `GET /api/backtest/run?strategy=ma_crossover&symbol=AAPL&range=1mo&interval=1d`
 - `GET /api/backtest?symbol=AAPL&range=1mo&interval=1d&feeRatePct=0.1&slippagePct=0.2`
+- `GET /api/backtest/sweep?symbol=AAPL&range=1mo&interval=1d&fastMin=3&fastMax=10&slowMin=15&slowMax=30`
 - `GET /api/backtest/portfolio?symbols=AAPL,MSFT&range=1mo&interval=1d`
 - `GET /api/paper/account`
 - `POST /api/paper/orders`
@@ -68,6 +69,11 @@ current close with deterministic percentage fee/slippage accounting, no short
 selling, and no persisted strategy run records. The response includes a
 professional report with daily returns, annualized return/volatility, Sharpe,
 Calmar, max drawdown period, trade-quality metrics, and a buy-and-hold benchmark.
+
+`GET /api/backtest/sweep` runs the MA crossover strategy across fast/slow window
+ranges, skips invalid combinations where the slow window is not greater than the
+fast window, limits requests to 200 combinations, and returns ranked summary
+rows for result comparison.
 
 ## Data Quality
 

@@ -9,6 +9,7 @@ import type {
   IndicatorsResponse,
   PaperAccountResponse,
   PaperOrderRequest,
+  ParameterSweepResponse,
   PortfolioBacktestResponse,
   Quote,
   StrategyDefinition,
@@ -30,6 +31,16 @@ interface HistoryParams {
 interface BacktestParams extends HistoryParams {
   fastWindow?: number;
   slowWindow?: number;
+  initialCapital?: number;
+  feeRatePct?: number;
+  slippagePct?: number;
+}
+
+interface ParameterSweepParams extends HistoryParams {
+  fastMin?: number;
+  fastMax?: number;
+  slowMin?: number;
+  slowMax?: number;
   initialCapital?: number;
   feeRatePct?: number;
   slippagePct?: number;
@@ -116,6 +127,21 @@ export function getBacktest(params: BacktestParams, options?: ClientOptions) {
     ['interval', params.interval],
     ['fastWindow', params.fastWindow?.toString()],
     ['slowWindow', params.slowWindow?.toString()],
+    ['initialCapital', params.initialCapital?.toString()],
+    ['feeRatePct', params.feeRatePct?.toString()],
+    ['slippagePct', params.slippagePct?.toString()]
+  ])}`, options);
+}
+
+export function getParameterSweep(params: ParameterSweepParams, options?: ClientOptions) {
+  return request<ParameterSweepResponse>(`/api/backtest/sweep?${buildQuery([
+    ['symbol', params.symbol],
+    ['range', params.range],
+    ['interval', params.interval],
+    ['fastMin', params.fastMin?.toString()],
+    ['fastMax', params.fastMax?.toString()],
+    ['slowMin', params.slowMin?.toString()],
+    ['slowMax', params.slowMax?.toString()],
     ['initialCapital', params.initialCapital?.toString()],
     ['feeRatePct', params.feeRatePct?.toString()],
     ['slippagePct', params.slippagePct?.toString()]

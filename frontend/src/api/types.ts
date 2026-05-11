@@ -150,6 +150,29 @@ export interface BacktestResponse {
   benchmark: BacktestBenchmark;
 }
 
+export interface ParameterSweepResult {
+  rank: number;
+  fastWindow: number;
+  slowWindow: number;
+  finalEquity: number;
+  totalReturnPct: number;
+  maxDrawdownPct: number;
+  sharpeRatio: number;
+  tradeCount: number;
+  winRatePct: number;
+}
+
+export interface ParameterSweepResponse {
+  instrument: Instrument;
+  range: HistoryRange;
+  interval: HistoryInterval;
+  source: 'live' | 'cache' | 'demo' | 'local' | string;
+  initialCapital: number;
+  feeRatePct: number;
+  slippagePct: number;
+  results: ParameterSweepResult[];
+}
+
 export interface PortfolioPosition {
   symbol: string;
   name: string;

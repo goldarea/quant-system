@@ -204,6 +204,29 @@ class BacktestResponse(BaseModel):
     benchmark: BacktestBenchmark
 
 
+class ParameterSweepResult(BaseModel):
+    rank: int
+    fastWindow: int
+    slowWindow: int
+    finalEquity: float
+    totalReturnPct: float
+    maxDrawdownPct: float
+    sharpeRatio: float
+    tradeCount: int
+    winRatePct: float
+
+
+class ParameterSweepResponse(BaseModel):
+    instrument: Instrument
+    range: HistoryRange
+    interval: HistoryInterval
+    source: str
+    initialCapital: float
+    feeRatePct: float
+    slippagePct: float
+    results: list[ParameterSweepResult]
+
+
 class PortfolioPosition(BaseModel):
     symbol: str
     name: str

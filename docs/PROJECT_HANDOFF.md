@@ -82,6 +82,7 @@ Routes:
 - `GET /api/quote?symbol=AAPL`
 - `GET /api/indicators?symbol=AAPL&range=1mo&interval=1d`
 - `GET /api/backtest?symbol=AAPL&range=1mo&interval=1d&feeRatePct=0.1&slippagePct=0.2`
+- `GET /api/backtest/sweep?symbol=AAPL&range=1mo&interval=1d&fastMin=3&fastMax=10&slowMin=15&slowMax=30`
 
 Supported history ranges are `1mo`, `3mo`, `6mo`, `1y`, `5y`, and `max`.
 Supported intervals are `1d`, `1wk`, and `1mo`.
@@ -176,6 +177,9 @@ Invoke-WebRequest http://127.0.0.1:5173/api/quote?symbol=AAPL -UseBasicParsing
 - Backend `/api/indicators` and frontend MA/MACD/RSI indicator UI added.
 - Adjustable strategy backtest UI, equity curve chart, fee/slippage controls, K-line trade markers, professional report metrics, and `/api/backtest` endpoint added.
 - Strategy framework added with `/api/strategies`, `/api/backtest/run`, MA crossover, RSI reversal, MACD trend, buy-and-hold, and schema-driven frontend parameter controls.
+- Data-quality reporting added for duplicate, missing, invalid, and stale history bars.
+- Paper-trading layer added with simulated account, positions, orders, fills, and dashboard controls.
+- Backend `/api/backtest/sweep` and frontend parameter-sweep panel added for MA crossover fast/slow batch comparison.
 
 ## Recommended Next Work
 

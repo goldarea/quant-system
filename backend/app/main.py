@@ -9,6 +9,7 @@ from app.services.backtest import run_ma_crossover_backtest
 from app.services.csv_import import parse_history_csv
 from app.services.indicators import build_indicators
 from app.services.paper_trading import PaperTradingService
+from app.services.parameter_sweep import run_ma_parameter_sweep
 from app.services.portfolio_backtest import run_equal_weight_portfolio_backtest
 from app.services.strategies import list_strategies, run_strategy_backtest
 from app.services.market_data import MarketDataService
@@ -142,6 +143,36 @@ def backtest(
         history_response.bars,
         fastWindow,
         slowWindow,
+        initialCapital,
+        feeRatePct,
+        slippagePct,
+    ))
+
+
+@app.get("/api/backtest/sweep")
+def parameter_sweep(
+    symbol: str | None = Query(default=None),
+    range: str = Query(default="1y"),
+    interval: str = Query(default="1d"),
+    fastMin: int = Query(default=3),
+    fastMax: int = Query(default=10),
+    slowMin: int = Query(default=15),
+    slowMax: int = Query(default=30),
+    initialCapital: float = Query(default=100000),
+    feeRatePct: float = Query(default=0),
+    slippagePct: float = Query(default=0),
+):
+    history_response = service.get_history(symbol, range, interval)
+    return ok(run_ma_parameter_sweep(
+        history_response.instrument,
+        history_response.range,
+        history_response.interval,
+        history_response.source,
+        history_response.bars,
+        fastMin,
+        fastMax,
+        slowMin,
+        slowMax,
         initialCapital,
         feeRatePct,
         slippagePct,

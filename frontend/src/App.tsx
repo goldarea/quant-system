@@ -18,7 +18,7 @@ import {
 } from '@arco-design/web-react';
 import { IconDashboard, IconDelete, IconPlus, IconStar, IconSync } from '@arco-design/web-react/icon';
 
-import { ApiError, getHealth, getHistory, getIndicators, getPaperAccount, getPortfolioBacktest, getQuote, getStrategies, getStrategyBacktest, importHistoryCsv, resetPaperAccount, searchSymbols, submitPaperOrder } from './api/client';
+import { ApiError, getHealth, getHistory, getIndicators, getPaperAccount, getParameterSweep, getPortfolioBacktest, getQuote, getStrategies, getStrategyBacktest, importHistoryCsv, resetPaperAccount, searchSymbols, submitPaperOrder } from './api/client';
 import type {
   BacktestResponse,
   HealthResponse,
@@ -28,6 +28,7 @@ import type {
   IndicatorsResponse,
   Instrument,
   PaperAccountResponse,
+  ParameterSweepResponse,
   PortfolioBacktestResponse,
   Quote,
   StrategyDefinition
@@ -95,6 +96,7 @@ export default function App() {
   const [history, setHistory] = useState<HistoryResponse | null>(null);
   const [indicators, setIndicators] = useState<IndicatorsResponse | null>(null);
   const [backtest, setBacktest] = useState<BacktestResponse | null>(null);
+  const [parameterSweep, setParameterSweep] = useState<ParameterSweepResponse | null>(null);
   const [strategies, setStrategies] = useState<StrategyDefinition[]>([]);
   const [strategyId, setStrategyId] = useState('ma_crossover');
   const [strategyParameters, setStrategyParameters] = useState<Record<string, number | string>>({});
@@ -107,12 +109,14 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const [backtestError, setBacktestError] = useState<string | null>(null);
+  const [sweepError, setSweepError] = useState<string | null>(null);
   const [portfolioBacktestError, setPortfolioBacktestError] = useState<string | null>(null);
   const [paperError, setPaperError] = useState<string | null>(null);
   const [paperSide, setPaperSide] = useState<'buy' | 'sell'>('buy');
   const [paperQuantity, setPaperQuantity] = useState(1);
   const [importLoading, setImportLoading] = useState(false);
   const [backtestLoading, setBacktestLoading] = useState(false);
+  const [sweepLoading, setSweepLoading] = useState(false);
   const [portfolioBacktestLoading, setPortfolioBacktestLoading] = useState(false);
   const [paperLoading, setPaperLoading] = useState(false);
   const [refreshToken, setRefreshToken] = useState(0);
@@ -120,6 +124,10 @@ export default function App() {
   const [showMacd, setShowMacd] = useState(true);
   const [showRsi, setShowRsi] = useState(true);
   const [watchlist, setWatchlist] = useState<Instrument[]>(() => loadWatchlist());
+  const [sweepFastMin, setSweepFastMin] = useState(3);
+  const [sweepFastMax, setSweepFastMax] = useState(10);
+  const [sweepSlowMin, setSweepSlowMin] = useState(15);
+  const [sweepSlowMax, setSweepSlowMax] = useState(30);
 
   const selectedStrategy = useMemo(
     () => strategies.find((strategy) => strategy.id === strategyId),
@@ -257,6 +265,32 @@ export default function App() {
   }, [selected, selectedStrategy, strategyId, range, interval, strategyParamSignature, refreshToken]);
 
   const portfolioSymbols = useMemo(() => watchlist.map((item) => item.symbol), [watchlist]);
+
+  const runSweep = useCallback(async () => {
+    if (!selected) return;
+
+    setSweepLoading(true);
+    setSweepError(null);
+    try {
+      setParameterSweep(await getParameterSweep({
+        symbol: selected.symbol,
+        range,
+        interval,
+        fastMin: sweepFastMin,
+        fastMax: sweepFastMax,
+        slowMin: sweepSlowMin,
+        slowMax: sweepSlowMax,
+        initialCapital: Number(strategyParameters.initialCapital) || 100000,
+        feeRatePct: Number(strategyParameters.feeRatePct) || 0,
+        slippagePct: Number(strategyParameters.slippagePct) || 0
+      }));
+    } catch (dataError) {
+      setParameterSweep(null);
+      setSweepError(errorMessage(dataError));
+    } finally {
+      setSweepLoading(false);
+    }
+  }, [selected, range, interval, sweepFastMin, sweepFastMax, sweepSlowMin, sweepSlowMax, strategyParameters.initialCapital, strategyParameters.feeRatePct, strategyParameters.slippagePct]);
 
   useEffect(() => {
     if (portfolioSymbols.length < 2) {
@@ -746,6 +780,85 @@ export default function App() {
             ) : (
               <Empty description="暂无回测结果" />
             )}
+            </Spin>
+          </Card>
+
+          <Card bordered={false} className="panel backtest-panel">
+            <div className="indicator-toolbar">
+              <Space wrap>
+                <Text bold>参数扫描</Text>
+                <Tag>MA Crossover</Tag>
+                <Tag>{parameterSweep ? `${parameterSweep.results.length} results` : 'batch'}</Tag>
+              </Space>
+              <Button size="small" type="primary" loading={sweepLoading} disabled={!selected} onClick={() => void runSweep()}>
+                运行扫描
+              </Button>
+            </div>
+            <Spin loading={sweepLoading} block>
+              <div className="backtest-controls">
+                <Space wrap>
+                  <Text type="secondary">Fast</Text>
+                  <InputNumber size="small" min={2} max={100} value={sweepFastMin} onChange={(value) => setSweepFastMin(Number(value) || 2)} />
+                  <Text type="secondary">至</Text>
+                  <InputNumber size="small" min={2} max={100} value={sweepFastMax} onChange={(value) => setSweepFastMax(Number(value) || 2)} />
+                  <Text type="secondary">Slow</Text>
+                  <InputNumber size="small" min={3} max={200} value={sweepSlowMin} onChange={(value) => setSweepSlowMin(Number(value) || 3)} />
+                  <Text type="secondary">至</Text>
+                  <InputNumber size="small" min={3} max={200} value={sweepSlowMax} onChange={(value) => setSweepSlowMax(Number(value) || 3)} />
+                  <Text type="secondary">资金 {Number(strategyParameters.initialCapital) || 100000}</Text>
+                </Space>
+              </div>
+              {sweepError && (
+                <Alert
+                  className="backtest-alert"
+                  type="error"
+                  title="参数扫描失败"
+                  content={sweepError}
+                  showIcon
+                />
+              )}
+              {parameterSweep ? (
+                <>
+                  <div className="indicator-summary">
+                    <Card size="small" bordered={false} className="indicator-card">
+                      <Text type="secondary">最佳组合</Text>
+                      <Title heading={6}>{parameterSweep.results[0] ? `${parameterSweep.results[0].fastWindow}/${parameterSweep.results[0].slowWindow}` : '-'}</Title>
+                      <Text type="secondary">来源 {parameterSweep.source}</Text>
+                    </Card>
+                    <Card size="small" bordered={false} className="indicator-card">
+                      <Text type="secondary">最佳收益</Text>
+                      <Title heading={6}>{parameterSweep.results[0]?.totalReturnPct ?? '-'}%</Title>
+                      <Text type="secondary">Sharpe {parameterSweep.results[0]?.sharpeRatio ?? '-'}</Text>
+                    </Card>
+                    <Card size="small" bordered={false} className="indicator-card">
+                      <Text type="secondary">成本假设</Text>
+                      <Title heading={6}>{parameterSweep.feeRatePct}%</Title>
+                      <Text type="secondary">滑点 {parameterSweep.slippagePct}%</Text>
+                    </Card>
+                  </div>
+                  <List
+                    size="small"
+                    className="backtest-trades"
+                    dataSource={parameterSweep.results.slice(0, 10)}
+                    noDataElement={<Empty description="暂无扫描结果" />}
+                    render={(result) => (
+                      <List.Item key={`${result.fastWindow}-${result.slowWindow}`}>
+                        <Space wrap>
+                          <Tag color={result.rank === 1 ? 'green' : 'arcoblue'}>#{result.rank}</Tag>
+                          <Text>Fast {result.fastWindow} / Slow {result.slowWindow}</Text>
+                          <Text type="secondary">return {result.totalReturnPct}%</Text>
+                          <Text type="secondary">equity {result.finalEquity}</Text>
+                          <Text type="secondary">drawdown {result.maxDrawdownPct}%</Text>
+                          <Text type="secondary">sharpe {result.sharpeRatio}</Text>
+                          <Text type="secondary">trades {result.tradeCount}</Text>
+                        </Space>
+                      </List.Item>
+                    )}
+                  />
+                </>
+              ) : (
+                <Empty description="运行参数扫描后显示排名前 10 的窗口组合" />
+              )}
             </Spin>
           </Card>
 

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { ApiError, getBacktest, getHistory, getPaperAccount, getPortfolioBacktest, getStrategies, getStrategyBacktest, searchSymbols, submitPaperOrder } from './client';
+import { ApiError, getBacktest, getHistory, getPaperAccount, getParameterSweep, getPortfolioBacktest, getStrategies, getStrategyBacktest, searchSymbols, submitPaperOrder } from './client';
 
 describe('api client', () => {
   it('unwraps successful API envelopes', async () => {
@@ -78,6 +78,37 @@ describe('api client', () => {
 
     expect(fetcher).toHaveBeenCalledWith('/api/strategies');
     expect(result[0].id).toBe('ma_crossover');
+  });
+
+  it('includes parameter sweep ranges', async () => {
+    const fetcher = vi.fn(async () => new Response(JSON.stringify({
+      ok: true,
+      data: {
+        instrument: { symbol: 'AAPL', name: 'Apple Inc.', market: 'US', currency: 'USD' },
+        range: '1y',
+        interval: '1d',
+        source: 'local',
+        initialCapital: 50000,
+        feeRatePct: 0.1,
+        slippagePct: 0.2,
+        results: []
+      }
+    })));
+
+    await getParameterSweep({
+      symbol: 'AAPL',
+      range: '1y',
+      interval: '1d',
+      fastMin: 3,
+      fastMax: 8,
+      slowMin: 12,
+      slowMax: 30,
+      initialCapital: 50000,
+      feeRatePct: 0.1,
+      slippagePct: 0.2
+    }, { fetcher });
+
+    expect(fetcher).toHaveBeenCalledWith('/api/backtest/sweep?symbol=AAPL&range=1y&interval=1d&fastMin=3&fastMax=8&slowMin=12&slowMax=30&initialCapital=50000&feeRatePct=0.1&slippagePct=0.2');
   });
 
   it('includes generalized strategy backtest parameters', async () => {
