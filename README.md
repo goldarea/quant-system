@@ -122,6 +122,9 @@ Routes:
 - `GET /api/backtest/run?strategy=ma_crossover&symbol=AAPL&range=1y&interval=1d`
 - `GET /api/backtest?symbol=AAPL&range=1y&interval=1d&feeRatePct=0.1&slippagePct=0.2`
 - `GET /api/backtest/portfolio?symbols=AAPL,MSFT&range=1y&interval=1d`
+- `GET /api/paper/account`
+- `POST /api/paper/orders`
+- `POST /api/paper/reset`
 
 Starter symbols include common US stocks, major ETFs, and common A-share
 symbols. The dashboard also includes a browser-local watchlist stored in
@@ -150,6 +153,11 @@ history response includes a data-quality report that checks duplicate bars,
 missing weekday trading bars for US/CN daily data, invalid OHLC values, and stale
 series; the dashboard renders these checks in a data-quality panel.
 
+The dashboard also includes a local paper-trading panel backed by simulated
+cash, positions, orders, and fills. Market paper orders execute against the
+latest quote, apply buying-power and position-quantity checks, and remain local
+to the FastAPI process; no real broker integration is performed.
+
 CSV imports can be sent from the dashboard or posted as `text/csv` to
 `/api/history/import`. Required headers are `time,open,high,low,close,volume`;
 `date` is also accepted instead of `time`. Imported bars are stored in the same
@@ -168,5 +176,5 @@ priority is:
    and buy-and-hold with schema-driven frontend parameters.
 4. Data quality checks are in place for duplicate bars, missing US/CN weekday
    daily bars, invalid OHLC values, and stale history series.
-5. Paper trading with simulated accounts, orders, fills, positions, and risk
-   checks before any real broker integration.
+5. Paper trading is in place with simulated cash, market orders, fills,
+   positions, buying-power checks, and a dashboard account panel.

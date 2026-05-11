@@ -48,6 +48,9 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 - `GET /api/backtest/run?strategy=ma_crossover&symbol=AAPL&range=1mo&interval=1d`
 - `GET /api/backtest?symbol=AAPL&range=1mo&interval=1d&feeRatePct=0.1&slippagePct=0.2`
 - `GET /api/backtest/portfolio?symbols=AAPL,MSFT&range=1mo&interval=1d`
+- `GET /api/paper/account`
+- `POST /api/paper/orders`
+- `POST /api/paper/reset`
 
 ## Backtesting
 
@@ -72,6 +75,15 @@ History responses include a `quality` report with total bars, duplicate bars,
 missing US/CN weekday daily bars, invalid OHLC bars, stale-series status, and
 issue details. The checks are intended to catch common local-cache/import and
 provider anomalies before a strategy result is trusted.
+
+## Paper Trading
+
+The paper-trading API keeps one in-memory simulated account for the local
+FastAPI process. `POST /api/paper/orders` accepts market buy/sell orders,
+executes them against the latest quote, records orders and fills, updates
+positions, and rejects orders that exceed buying power or available quantity.
+`POST /api/paper/reset` restores the default cash-only account. No broker API or
+real execution is involved.
 
 ## Data Providers
 

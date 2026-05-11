@@ -197,17 +197,7 @@ Status: completed. `HistoryResponse` now includes a `quality` report with duplic
 
 ### Phase 11: Paper Trading Layer
 
-Goal: prepare the architecture for live workflows without immediately connecting real broker execution.
-
-Scope:
-
-- Add simulated accounts, orders, fills, positions, and account equity snapshots.
-- Convert strategy signals into paper orders through a risk-check layer.
-- Track order status transitions and execution logs.
-- Add frontend views for paper account state, open orders, fills, and positions.
-- Keep real broker integration out of scope until paper trading and risk controls are reliable.
-
-Why next: paper trading validates operational flow before introducing real capital or broker API complexity.
+Status: completed. The backend now exposes `/api/paper/account`, `/api/paper/orders`, and `/api/paper/reset` for one in-memory simulated account. Market orders execute against the latest quote, update cash/positions/fills/orders, and reject insufficient buying power or sell quantity. The frontend renders a paper-trading panel with account metrics, order entry, positions, and recent order status. Real broker integration remains out of scope.
 
 ### Longer-term Gaps Versus Mature Quant Platforms
 

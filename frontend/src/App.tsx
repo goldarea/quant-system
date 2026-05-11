@@ -18,7 +18,7 @@ import {
 } from '@arco-design/web-react';
 import { IconDashboard, IconDelete, IconPlus, IconStar, IconSync } from '@arco-design/web-react/icon';
 
-import { ApiError, getHealth, getHistory, getIndicators, getPortfolioBacktest, getQuote, getStrategies, getStrategyBacktest, importHistoryCsv, searchSymbols } from './api/client';
+import { ApiError, getHealth, getHistory, getIndicators, getPaperAccount, getPortfolioBacktest, getQuote, getStrategies, getStrategyBacktest, importHistoryCsv, resetPaperAccount, searchSymbols, submitPaperOrder } from './api/client';
 import type {
   BacktestResponse,
   HealthResponse,
@@ -27,6 +27,7 @@ import type {
   HistoryResponse,
   IndicatorsResponse,
   Instrument,
+  PaperAccountResponse,
   PortfolioBacktestResponse,
   Quote,
   StrategyDefinition
@@ -98,6 +99,7 @@ export default function App() {
   const [strategyId, setStrategyId] = useState('ma_crossover');
   const [strategyParameters, setStrategyParameters] = useState<Record<string, number | string>>({});
   const [portfolioBacktest, setPortfolioBacktest] = useState<PortfolioBacktestResponse | null>(null);
+  const [paperAccount, setPaperAccount] = useState<PaperAccountResponse | null>(null);
   const [range, setRange] = useState<HistoryRange>('1y');
   const [interval, setInterval] = useState<HistoryInterval>('1d');
   const [searchLoading, setSearchLoading] = useState(false);
@@ -106,9 +108,13 @@ export default function App() {
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const [backtestError, setBacktestError] = useState<string | null>(null);
   const [portfolioBacktestError, setPortfolioBacktestError] = useState<string | null>(null);
+  const [paperError, setPaperError] = useState<string | null>(null);
+  const [paperSide, setPaperSide] = useState<'buy' | 'sell'>('buy');
+  const [paperQuantity, setPaperQuantity] = useState(1);
   const [importLoading, setImportLoading] = useState(false);
   const [backtestLoading, setBacktestLoading] = useState(false);
   const [portfolioBacktestLoading, setPortfolioBacktestLoading] = useState(false);
+  const [paperLoading, setPaperLoading] = useState(false);
   const [refreshToken, setRefreshToken] = useState(0);
   const [visibleAverages, setVisibleAverages] = useState({ ma5: true, ma20: true, ma60: false });
   const [showMacd, setShowMacd] = useState(true);
@@ -171,6 +177,9 @@ export default function App() {
         }
       })
       .catch((strategyError) => setError(errorMessage(strategyError)));
+    getPaperAccount()
+      .then(setPaperAccount)
+      .catch((accountError) => setPaperError(errorMessage(accountError)));
   }, []);
 
   useEffect(() => {
@@ -303,6 +312,38 @@ export default function App() {
       setImportLoading(false);
     }
   }, [selected, range, interval]);
+
+  const submitSelectedPaperOrder = useCallback(async () => {
+    if (!selected) return;
+
+    setPaperLoading(true);
+    setPaperError(null);
+    try {
+      const nextAccount = await submitPaperOrder({
+        symbol: selected.symbol,
+        side: paperSide,
+        quantity: paperQuantity,
+        type: 'market'
+      });
+      setPaperAccount(nextAccount);
+    } catch (orderError) {
+      setPaperError(errorMessage(orderError));
+    } finally {
+      setPaperLoading(false);
+    }
+  }, [selected, paperSide, paperQuantity]);
+
+  const resetPaper = useCallback(async () => {
+    setPaperLoading(true);
+    setPaperError(null);
+    try {
+      setPaperAccount(await resetPaperAccount());
+    } catch (resetError) {
+      setPaperError(errorMessage(resetError));
+    } finally {
+      setPaperLoading(false);
+    }
+  }, []);
 
   const source = history?.source || quote?.source;
   const bars = useMemo(() => history?.bars ?? [], [history]);
@@ -767,6 +808,101 @@ export default function App() {
                 </>
               ) : (
                 <Empty description="自选股至少需要 2 个标的才能运行组合回测" />
+              )}
+            </Spin>
+          </Card>
+
+          <Card bordered={false} className="panel backtest-panel">
+            <div className="indicator-toolbar">
+              <Space wrap>
+                <Text bold>Paper Trading</Text>
+                <Tag>{selected?.symbol ?? 'symbol'}</Tag>
+                <Tag>{paperAccount?.account.accountId ?? 'paper-default'}</Tag>
+              </Space>
+              <Button size="small" loading={paperLoading} onClick={() => void resetPaper()}>重置账户</Button>
+            </div>
+            <Spin loading={paperLoading} block>
+              <div className="backtest-controls">
+                <Space wrap>
+                  <Radio.Group
+                    type="button"
+                    size="small"
+                    value={paperSide}
+                    onChange={setPaperSide}
+                    options={[{ label: '买入', value: 'buy' }, { label: '卖出', value: 'sell' }]}
+                  />
+                  <Text type="secondary">数量</Text>
+                  <InputNumber size="small" min={1} step={1} value={paperQuantity} onChange={(value) => setPaperQuantity(Number(value) || 1)} />
+                  <Button type="primary" size="small" disabled={!selected} onClick={() => void submitSelectedPaperOrder()}>
+                    提交市价单
+                  </Button>
+                </Space>
+              </div>
+              {paperError && (
+                <Alert
+                  className="backtest-alert"
+                  type="error"
+                  title="模拟交易失败"
+                  content={paperError}
+                  showIcon
+                />
+              )}
+              {paperAccount ? (
+                <>
+                  <div className="indicator-summary">
+                    <Card size="small" bordered={false} className="indicator-card">
+                      <Text type="secondary">账户权益</Text>
+                      <Title heading={6}>{paperAccount.account.equity}</Title>
+                      <Text type="secondary">现金 {paperAccount.account.cash}</Text>
+                    </Card>
+                    <Card size="small" bordered={false} className="indicator-card">
+                      <Text type="secondary">购买力</Text>
+                      <Title heading={6}>{paperAccount.account.buyingPower}</Title>
+                      <Text type="secondary">已实现 {paperAccount.account.realizedPnl}</Text>
+                    </Card>
+                    <Card size="small" bordered={false} className="indicator-card">
+                      <Text type="secondary">浮动盈亏</Text>
+                      <Title heading={6}>{paperAccount.account.unrealizedPnl}</Title>
+                      <Text type="secondary">持仓 {paperAccount.positions.length}</Text>
+                    </Card>
+                  </div>
+                  <List
+                    size="small"
+                    className="backtest-trades"
+                    dataSource={paperAccount.positions}
+                    noDataElement={<Empty description="暂无模拟持仓" />}
+                    render={(position) => (
+                      <List.Item key={position.symbol}>
+                        <Space wrap>
+                          <Tag>{position.symbol}</Tag>
+                          <Text type="secondary">qty {position.quantity}</Text>
+                          <Text type="secondary">avg {position.averageCost}</Text>
+                          <Text type="secondary">last {position.lastPrice}</Text>
+                          <Text type="secondary">pnl {position.unrealizedPnl}</Text>
+                        </Space>
+                      </List.Item>
+                    )}
+                  />
+                  <List
+                    size="small"
+                    className="backtest-trades"
+                    dataSource={paperAccount.orders.slice(0, 5)}
+                    noDataElement={<Empty description="暂无模拟订单" />}
+                    render={(order) => (
+                      <List.Item key={order.id}>
+                        <Space wrap>
+                          <Tag color={order.status === 'filled' ? 'green' : order.status === 'rejected' ? 'red' : 'arcoblue'}>{order.status}</Tag>
+                          <Text>{order.symbol}</Text>
+                          <Text type="secondary">{order.side} {order.quantity}</Text>
+                          <Text type="secondary">fill {order.fillPrice ?? '-'}</Text>
+                          {order.message && <Text type="secondary">{order.message}</Text>}
+                        </Space>
+                      </List.Item>
+                    )}
+                  />
+                </>
+              ) : (
+                <Empty description="暂无模拟账户数据" />
               )}
             </Spin>
           </Card>

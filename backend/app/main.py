@@ -4,10 +4,11 @@ from typing import Any
 from fastapi import FastAPI, Query, Request
 from fastapi.responses import JSONResponse
 
-from app.models import ApiError, HealthResponse, HistoryImportResponse
+from app.models import ApiError, HealthResponse, HistoryImportResponse, PaperOrderRequest
 from app.services.backtest import run_ma_crossover_backtest
 from app.services.csv_import import parse_history_csv
 from app.services.indicators import build_indicators
+from app.services.paper_trading import PaperTradingService
 from app.services.portfolio_backtest import run_equal_weight_portfolio_backtest
 from app.services.strategies import list_strategies, run_strategy_backtest
 from app.services.market_data import MarketDataService
@@ -15,6 +16,7 @@ from app.services.market_data import MarketDataService
 
 app = FastAPI(title="Quant System API", version="0.1.0")
 service = MarketDataService()
+paper_service = PaperTradingService()
 
 
 def ok(data: Any) -> dict[str, Any]:
@@ -157,6 +159,23 @@ def portfolio_backtest(
     histories = [service.get_history(symbol, range, interval) for symbol in symbol_list]
     range_value, interval_value = service.validate_history_options(range, interval)
     return ok(run_equal_weight_portfolio_backtest(histories, range_value, interval_value, initialCapital))
+
+
+@app.get("/api/paper/account")
+def paper_account():
+    return ok(paper_service.snapshot())
+
+
+@app.post("/api/paper/orders")
+def paper_order(request: PaperOrderRequest):
+    instrument = service.resolve(request.symbol)
+    quote_response = service.get_quote(instrument.symbol)
+    return ok(paper_service.submit_order(request, instrument, quote_response))
+
+
+@app.post("/api/paper/reset")
+def paper_reset():
+    return ok(paper_service.reset())
 
 
 @app.get("/api/quote")

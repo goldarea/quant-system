@@ -267,6 +267,62 @@ class IndicatorsResponse(BaseModel):
     rsi14: list[RsiPoint]
 
 
+class PaperAccountSummary(BaseModel):
+    accountId: str
+    cash: float
+    equity: float
+    buyingPower: float
+    realizedPnl: float
+    unrealizedPnl: float
+
+
+class PaperPosition(BaseModel):
+    symbol: str
+    quantity: float
+    averageCost: float
+    lastPrice: float
+    marketValue: float
+    unrealizedPnl: float
+
+
+class PaperOrder(BaseModel):
+    id: str
+    symbol: str
+    side: str
+    quantity: float
+    type: str
+    status: str
+    submittedAt: str
+    filledAt: str | None = None
+    fillPrice: float | None = None
+    message: str | None = None
+
+
+class PaperFill(BaseModel):
+    id: str
+    orderId: str
+    symbol: str
+    side: str
+    quantity: float
+    price: float
+    value: float
+    time: str
+
+
+class PaperAccountResponse(BaseModel):
+    account: PaperAccountSummary
+    positions: list[PaperPosition]
+    orders: list[PaperOrder]
+    fills: list[PaperFill]
+
+
+class PaperOrderRequest(BaseModel):
+    symbol: str
+    side: str
+    quantity: float
+    type: str = "market"
+
+
 class HealthResponse(BaseModel):
     status: str
     time: str

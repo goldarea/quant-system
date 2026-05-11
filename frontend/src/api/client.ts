@@ -7,10 +7,12 @@ import type {
   HistoryRange,
   HistoryResponse,
   IndicatorsResponse,
-  Instrument,
+  PaperAccountResponse,
+  PaperOrderRequest,
   PortfolioBacktestResponse,
   Quote,
-  StrategyDefinition
+  StrategyDefinition,
+  Instrument
 } from './types';
 
 type Fetcher = (input: string, init?: RequestInit) => Promise<Response>;
@@ -137,6 +139,22 @@ export function getPortfolioBacktest(params: PortfolioBacktestParams, options?: 
     ['interval', params.interval],
     ['initialCapital', params.initialCapital?.toString()]
   ])}`, options);
+}
+
+export function getPaperAccount(options?: ClientOptions) {
+  return request<PaperAccountResponse>('/api/paper/account', options);
+}
+
+export function submitPaperOrder(order: PaperOrderRequest, options?: ClientOptions) {
+  return request<PaperAccountResponse>('/api/paper/orders', options, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(order)
+  });
+}
+
+export function resetPaperAccount(options?: ClientOptions) {
+  return request<PaperAccountResponse>('/api/paper/reset', options, { method: 'POST' });
 }
 
 export function importHistoryCsv(params: HistoryParams, csvText: string, options?: ClientOptions) {

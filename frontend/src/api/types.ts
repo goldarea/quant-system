@@ -234,6 +234,62 @@ export interface IndicatorsResponse {
   rsi14: RsiPoint[];
 }
 
+export interface PaperAccountSummary {
+  accountId: string;
+  cash: number;
+  equity: number;
+  buyingPower: number;
+  realizedPnl: number;
+  unrealizedPnl: number;
+}
+
+export interface PaperPosition {
+  symbol: string;
+  quantity: number;
+  averageCost: number;
+  lastPrice: number;
+  marketValue: number;
+  unrealizedPnl: number;
+}
+
+export interface PaperOrder {
+  id: string;
+  symbol: string;
+  side: string;
+  quantity: number;
+  type: string;
+  status: string;
+  submittedAt: string;
+  filledAt?: string | null;
+  fillPrice?: number | null;
+  message?: string | null;
+}
+
+export interface PaperFill {
+  id: string;
+  orderId: string;
+  symbol: string;
+  side: string;
+  quantity: number;
+  price: number;
+  value: number;
+  time: string;
+}
+
+export interface PaperAccountResponse {
+  account: PaperAccountSummary;
+  positions: PaperPosition[];
+  orders: PaperOrder[];
+  fills: PaperFill[];
+}
+
+export interface PaperOrderRequest {
+  symbol: string;
+  side: 'buy' | 'sell';
+  quantity: number;
+  type?: 'market';
+}
+
 export interface HealthResponse {
   status: string;
   time: string;

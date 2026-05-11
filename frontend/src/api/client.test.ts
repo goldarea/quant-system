@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { ApiError, getBacktest, getHistory, getPortfolioBacktest, getStrategies, getStrategyBacktest, searchSymbols } from './client';
+import { ApiError, getBacktest, getHistory, getPaperAccount, getPortfolioBacktest, getStrategies, getStrategyBacktest, searchSymbols, submitPaperOrder } from './client';
 
 describe('api client', () => {
   it('unwraps successful API envelopes', async () => {
@@ -113,6 +113,28 @@ describe('api client', () => {
 
     expect(fetcher).toHaveBeenCalledWith('/api/backtest/run?strategy=ma_crossover&symbol=AAPL&range=1y&interval=1d&fastWindow=8&slowWindow=21&initialCapital=50000');
   });
+  it('calls paper trading account and order endpoints', async () => {
+    const fetcher = vi.fn(async () => new Response(JSON.stringify({
+      ok: true,
+      data: {
+        account: { accountId: 'paper-default', cash: 1000, equity: 1000, buyingPower: 1000, realizedPnl: 0, unrealizedPnl: 0 },
+        positions: [],
+        orders: [],
+        fills: []
+      }
+    })));
+
+    await getPaperAccount({ fetcher });
+    await submitPaperOrder({ symbol: 'AAPL', side: 'buy', quantity: 10, type: 'market' }, { fetcher });
+
+    expect(fetcher).toHaveBeenNthCalledWith(1, '/api/paper/account');
+    expect(fetcher).toHaveBeenNthCalledWith(2, '/api/paper/orders', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ symbol: 'AAPL', side: 'buy', quantity: 10, type: 'market' })
+    });
+  });
+
   it('includes portfolio backtest parameters', async () => {
     const fetcher = vi.fn(async () => new Response(JSON.stringify({
       ok: true,
