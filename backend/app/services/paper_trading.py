@@ -96,6 +96,17 @@ class PaperTradingService:
         self._fill_order(order, quote.price, now)
         return self.snapshot()
 
+    def update_risk_limits(self, max_order_value_pct: float, max_position_value_pct: float) -> PaperAccountResponse:
+        if max_order_value_pct <= 0 or max_order_value_pct > 100:
+            raise ValidationApiError("maxOrderValuePct must be between 0 and 100")
+        if max_position_value_pct <= 0 or max_position_value_pct > 100:
+            raise ValidationApiError("maxPositionValuePct must be between 0 and 100")
+        if max_order_value_pct > max_position_value_pct:
+            raise ValidationApiError("maxOrderValuePct must be less than or equal to maxPositionValuePct")
+        self.max_order_value_pct = float(max_order_value_pct)
+        self.max_position_value_pct = float(max_position_value_pct)
+        return self.snapshot()
+
     def mark_to_market(self, quote: Quote) -> PaperAccountResponse:
         position = self.positions.get(quote.symbol)
         if position is not None:

@@ -18,7 +18,7 @@ import {
 } from '@arco-design/web-react';
 import { IconDashboard, IconDelete, IconPlus, IconStar, IconSync } from '@arco-design/web-react/icon';
 
-import { ApiError, getHealth, getHistory, getIndicators, getPaperAccount, getParameterSweep, getPortfolioBacktest, getQuote, getStrategies, getStrategyBacktest, importHistoryCsv, resetPaperAccount, searchSymbols, submitPaperOrder } from './api/client';
+import { ApiError, getHealth, getHistory, getIndicators, getPaperAccount, getParameterSweep, getPortfolioBacktest, getQuote, getStrategies, getStrategyBacktest, importHistoryCsv, resetPaperAccount, searchSymbols, submitPaperOrder, updatePaperRiskLimits } from './api/client';
 import type {
   BacktestResponse,
   HealthResponse,
@@ -114,6 +114,8 @@ export default function App() {
   const [paperError, setPaperError] = useState<string | null>(null);
   const [paperSide, setPaperSide] = useState<'buy' | 'sell'>('buy');
   const [paperQuantity, setPaperQuantity] = useState(1);
+  const [paperMaxOrderPct, setPaperMaxOrderPct] = useState(25);
+  const [paperMaxPositionPct, setPaperMaxPositionPct] = useState(50);
   const [importLoading, setImportLoading] = useState(false);
   const [backtestLoading, setBacktestLoading] = useState(false);
   const [sweepLoading, setSweepLoading] = useState(false);
@@ -186,7 +188,11 @@ export default function App() {
       })
       .catch((strategyError) => setError(errorMessage(strategyError)));
     getPaperAccount()
-      .then(setPaperAccount)
+      .then((account) => {
+        setPaperAccount(account);
+        setPaperMaxOrderPct(account.risk.limits.maxOrderValuePct);
+        setPaperMaxPositionPct(account.risk.limits.maxPositionValuePct);
+      })
       .catch((accountError) => setPaperError(errorMessage(accountError)));
   }, []);
 
@@ -366,6 +372,22 @@ export default function App() {
       setPaperLoading(false);
     }
   }, [selected, paperSide, paperQuantity]);
+
+  const updatePaperRisk = useCallback(async () => {
+    setPaperLoading(true);
+    setPaperError(null);
+    try {
+      const nextAccount = await updatePaperRiskLimits({
+        maxOrderValuePct: paperMaxOrderPct,
+        maxPositionValuePct: paperMaxPositionPct
+      });
+      setPaperAccount(nextAccount);
+    } catch (riskError) {
+      setPaperError(errorMessage(riskError));
+    } finally {
+      setPaperLoading(false);
+    }
+  }, [paperMaxOrderPct, paperMaxPositionPct]);
 
   const resetPaper = useCallback(async () => {
     setPaperLoading(true);
@@ -950,6 +972,13 @@ export default function App() {
                   <InputNumber size="small" min={1} step={1} value={paperQuantity} onChange={(value) => setPaperQuantity(Number(value) || 1)} />
                   <Button type="primary" size="small" disabled={!selected} onClick={() => void submitSelectedPaperOrder()}>
                     提交市价单
+                  </Button>
+                  <Text type="secondary">单笔%</Text>
+                  <InputNumber size="small" min={1} max={100} value={paperMaxOrderPct} onChange={(value) => setPaperMaxOrderPct(Number(value) || 1)} />
+                  <Text type="secondary">持仓%</Text>
+                  <InputNumber size="small" min={1} max={100} value={paperMaxPositionPct} onChange={(value) => setPaperMaxPositionPct(Number(value) || 1)} />
+                  <Button size="small" onClick={() => void updatePaperRisk()}>
+                    更新风控
                   </Button>
                 </Space>
               </div>

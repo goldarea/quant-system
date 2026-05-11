@@ -9,6 +9,7 @@ import type {
   IndicatorsResponse,
   PaperAccountResponse,
   PaperOrderRequest,
+  PaperRiskLimitsRequest,
   ParameterSweepResponse,
   PortfolioBacktestResponse,
   Quote,
@@ -176,6 +177,14 @@ export function submitPaperOrder(order: PaperOrderRequest, options?: ClientOptio
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(order)
+  });
+}
+
+export function updatePaperRiskLimits(limits: PaperRiskLimitsRequest, options?: ClientOptions) {
+  return request<PaperAccountResponse>('/api/paper/risk', options, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(limits)
   });
 }
 

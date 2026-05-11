@@ -125,6 +125,7 @@ Routes:
 - `GET /api/backtest/portfolio?symbols=AAPL,MSFT&range=1y&interval=1d`
 - `GET /api/paper/account`
 - `POST /api/paper/orders`
+- `POST /api/paper/risk`
 - `POST /api/paper/reset`
 
 Starter symbols include common US stocks, major ETFs, and common A-share
@@ -159,7 +160,7 @@ series; the dashboard renders these checks in a data-quality panel.
 
 The dashboard also includes a local paper-trading panel backed by simulated
 cash, positions, orders, and fills. Market paper orders execute against the
-latest quote, apply buying-power, single-order value, single-position value, and
+latest quote, apply configurable buying-power, single-order value, single-position value, and
 position-quantity checks, and remain local to the FastAPI process; no real broker
 integration is performed.
 

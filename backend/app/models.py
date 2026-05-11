@@ -337,6 +337,11 @@ class PaperRiskLimits(BaseModel):
     maxPositionValuePct: float
 
 
+class PaperRiskLimitsRequest(BaseModel):
+    maxOrderValuePct: float
+    maxPositionValuePct: float
+
+
 class PaperRiskStatus(BaseModel):
     grossExposure: float
     grossExposurePct: float

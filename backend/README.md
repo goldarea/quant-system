@@ -51,6 +51,7 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 - `GET /api/backtest/portfolio?symbols=AAPL,MSFT&range=1mo&interval=1d`
 - `GET /api/paper/account`
 - `POST /api/paper/orders`
+- `POST /api/paper/risk`
 - `POST /api/paper/reset`
 
 ## Backtesting
@@ -89,7 +90,8 @@ FastAPI process. `POST /api/paper/orders` accepts market buy/sell orders,
 executes them against the latest quote, records orders and fills, updates
 positions, and rejects orders that exceed buying power, available quantity,
 single-order value limits, or single-position value limits. Account snapshots
-include risk status with gross exposure and active limit values. `POST /api/paper/reset`
+include risk status with gross exposure and active limit values, and `POST /api/paper/risk`
+updates the local max-order and max-position percentages. `POST /api/paper/reset`
 restores the default cash-only account. No broker API or real execution is
 involved.
 

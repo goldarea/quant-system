@@ -4,7 +4,7 @@ from typing import Any
 from fastapi import FastAPI, Query, Request
 from fastapi.responses import JSONResponse
 
-from app.models import ApiError, HealthResponse, HistoryImportResponse, PaperOrderRequest
+from app.models import ApiError, HealthResponse, HistoryImportResponse, PaperOrderRequest, PaperRiskLimitsRequest
 from app.services.backtest import run_ma_crossover_backtest
 from app.services.csv_import import parse_history_csv
 from app.services.indicators import build_indicators
@@ -202,6 +202,11 @@ def paper_order(request: PaperOrderRequest):
     instrument = service.resolve(request.symbol)
     quote_response = service.get_quote(instrument.symbol)
     return ok(paper_service.submit_order(request, instrument, quote_response))
+
+
+@app.post("/api/paper/risk")
+def paper_risk(request: PaperRiskLimitsRequest):
+    return ok(paper_service.update_risk_limits(request.maxOrderValuePct, request.maxPositionValuePct))
 
 
 @app.post("/api/paper/reset")

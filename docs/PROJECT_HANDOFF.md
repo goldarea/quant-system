@@ -83,6 +83,10 @@ Routes:
 - `GET /api/indicators?symbol=AAPL&range=1mo&interval=1d`
 - `GET /api/backtest?symbol=AAPL&range=1mo&interval=1d&feeRatePct=0.1&slippagePct=0.2`
 - `GET /api/backtest/sweep?symbol=AAPL&range=1mo&interval=1d&fastMin=3&fastMax=10&slowMin=15&slowMax=30`
+- `GET /api/paper/account`
+- `POST /api/paper/orders`
+- `POST /api/paper/risk`
+- `POST /api/paper/reset`
 
 Supported history ranges are `1mo`, `3mo`, `6mo`, `1y`, `5y`, and `max`.
 Supported intervals are `1d`, `1wk`, and `1mo`.
@@ -201,7 +205,7 @@ Status: completed. `HistoryResponse` now includes a `quality` report with duplic
 
 ### Phase 11: Paper Trading Layer
 
-Status: completed. The backend now exposes `/api/paper/account`, `/api/paper/orders`, and `/api/paper/reset` for one in-memory simulated account. Market orders execute against the latest quote, update cash/positions/fills/orders, and reject insufficient buying power, insufficient sell quantity, oversized single orders, and oversized single-symbol positions. The frontend renders a paper-trading panel with account metrics, risk exposure/limits, order entry, positions, and recent order status. Real broker integration remains out of scope.
+Status: completed. The backend now exposes `/api/paper/account`, `/api/paper/orders`, `/api/paper/risk`, and `/api/paper/reset` for one in-memory simulated account. Market orders execute against the latest quote, update cash/positions/fills/orders, and reject insufficient buying power, insufficient sell quantity, oversized single orders, and oversized single-symbol positions. The frontend renders a paper-trading panel with account metrics, configurable risk exposure/limits, order entry, positions, and recent order status. Real broker integration remains out of scope.
 
 ### Longer-term Gaps Versus Mature Quant Platforms
 

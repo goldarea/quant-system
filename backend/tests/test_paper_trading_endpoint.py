@@ -143,3 +143,37 @@ def test_paper_order_rejects_position_risk_limit(tmp_path):
     finally:
         main_module.service = previous_service
         main_module.paper_service = previous_paper_service
+
+
+def test_paper_risk_endpoint_updates_limits():
+    previous_paper_service = main_module.paper_service
+    main_module.paper_service = PaperTradingService(initial_cash=1000)
+    client = TestClient(app)
+
+    try:
+        response = client.post("/api/paper/risk", json={"maxOrderValuePct": 40, "maxPositionValuePct": 80})
+        payload = response.json()
+
+        assert response.status_code == 200
+        assert payload["data"]["risk"]["limits"]["maxOrderValuePct"] == 40
+        assert payload["data"]["risk"]["limits"]["maxPositionValuePct"] == 80
+        assert payload["data"]["risk"]["maxOrderValue"] == 400
+        assert payload["data"]["risk"]["maxPositionValue"] == 800
+    finally:
+        main_module.paper_service = previous_paper_service
+
+
+def test_paper_risk_endpoint_rejects_invalid_limits():
+    previous_paper_service = main_module.paper_service
+    main_module.paper_service = PaperTradingService(initial_cash=1000)
+    client = TestClient(app)
+
+    try:
+        response = client.post("/api/paper/risk", json={"maxOrderValuePct": 90, "maxPositionValuePct": 50})
+        payload = response.json()
+
+        assert response.status_code == 400
+        assert payload["ok"] is False
+        assert payload["error"]["message"] == "maxOrderValuePct must be less than or equal to maxPositionValuePct"
+    finally:
+        main_module.paper_service = previous_paper_service

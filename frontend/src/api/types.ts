@@ -304,6 +304,8 @@ export interface PaperRiskLimits {
   maxPositionValuePct: number;
 }
 
+export type PaperRiskLimitsRequest = PaperRiskLimits;
+
 export interface PaperRiskStatus {
   grossExposure: number;
   grossExposurePct: number;
