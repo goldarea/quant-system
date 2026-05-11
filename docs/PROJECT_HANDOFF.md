@@ -83,6 +83,7 @@ Routes:
 - `GET /api/indicators?symbol=AAPL&range=1mo&interval=1d`
 - `GET /api/backtest?symbol=AAPL&range=1mo&interval=1d&feeRatePct=0.1&slippagePct=0.2`
 - `GET /api/backtest/sweep?symbol=AAPL&range=1mo&interval=1d&fastMin=3&fastMax=10&slowMin=15&slowMax=30`
+- `GET /api/experiments/runs`
 - `GET /api/paper/account`
 - `POST /api/paper/orders`
 - `POST /api/paper/risk`
@@ -184,6 +185,7 @@ Invoke-WebRequest http://127.0.0.1:5173/api/quote?symbol=AAPL -UseBasicParsing
 - Data-quality reporting added for duplicate, missing, invalid, and stale history bars.
 - Paper-trading layer added with simulated account, positions, orders, fills, and dashboard controls.
 - Backend `/api/backtest/sweep` and frontend parameter-sweep panel added for MA crossover fast/slow batch comparison.
+- Backend `/api/experiments/runs` and frontend experiment-record panel added for recent in-memory strategy run summaries.
 
 ## Recommended Next Work
 
@@ -206,6 +208,10 @@ Status: completed. `HistoryResponse` now includes a `quality` report with duplic
 ### Phase 11: Paper Trading Layer
 
 Status: completed. The backend now exposes `/api/paper/account`, `/api/paper/orders`, `/api/paper/risk`, and `/api/paper/reset` for one in-memory simulated account. Market orders execute against the latest quote, update cash/positions/fills/orders, and reject insufficient buying power, insufficient sell quantity, oversized single orders, and oversized single-symbol positions. The frontend renders a paper-trading panel with account metrics, configurable risk exposure/limits, order entry, positions, recent order status, and audit events for submissions/fills/rejections/risk updates/resets. Real broker integration remains out of scope.
+
+### Phase 12: Experiment Tracking
+
+Status: completed. Strategy backtests run through `/api/backtest/run` now append an in-memory experiment summary containing strategy id, symbol, range, interval, source, parameters, and headline metrics. The backend exposes recent summaries through `/api/experiments/runs`, and the frontend renders an experiment-record panel so recent parameter/strategy runs can be compared without copying the current result manually.
 
 ### Longer-term Gaps Versus Mature Quant Platforms
 

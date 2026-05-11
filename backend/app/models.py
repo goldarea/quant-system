@@ -168,6 +168,23 @@ class StrategyDefinition(BaseModel):
     parameters: list[StrategyParameter]
 
 
+class ExperimentRun(BaseModel):
+    id: str
+    time: str
+    strategy: str
+    symbol: str
+    range: HistoryRange
+    interval: HistoryInterval
+    source: str
+    parameters: dict[str, float | str]
+    finalEquity: float
+    totalReturnPct: float
+    maxDrawdownPct: float
+    sharpeRatio: float
+    tradeCount: int
+    winRatePct: float
+
+
 class BacktestSummary(BaseModel):
     initialCapital: float
     finalEquity: float

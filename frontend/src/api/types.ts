@@ -69,6 +69,23 @@ export interface StrategyDefinition {
   parameters: StrategyParameter[];
 }
 
+export interface ExperimentRun {
+  id: string;
+  time: string;
+  strategy: string;
+  symbol: string;
+  range: HistoryRange;
+  interval: HistoryInterval;
+  source: 'live' | 'cache' | 'demo' | 'local' | string;
+  parameters: Record<string, number | string>;
+  finalEquity: number;
+  totalReturnPct: number;
+  maxDrawdownPct: number;
+  sharpeRatio: number;
+  tradeCount: number;
+  winRatePct: number;
+}
+
 export interface BacktestEquityPoint {
   time: string;
   equity: number;

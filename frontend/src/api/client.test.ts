@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { ApiError, getBacktest, getHistory, getPaperAccount, getParameterSweep, getPortfolioBacktest, getStrategies, getStrategyBacktest, searchSymbols, submitPaperOrder, updatePaperRiskLimits } from './client';
+import { ApiError, getBacktest, getExperimentRuns, getHistory, getPaperAccount, getParameterSweep, getPortfolioBacktest, getStrategies, getStrategyBacktest, searchSymbols, submitPaperOrder, updatePaperRiskLimits } from './client';
 
 describe('api client', () => {
   it('unwraps successful API envelopes', async () => {
@@ -178,6 +178,33 @@ describe('api client', () => {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ symbol: 'AAPL', side: 'buy', quantity: 10, type: 'market' })
     });
+  });
+
+  it('fetches recent experiment runs', async () => {
+    const fetcher = vi.fn(async () => new Response(JSON.stringify({
+      ok: true,
+      data: [{
+        id: 'run-1',
+        time: '2024-01-01T00:00:00Z',
+        strategy: 'ma_crossover',
+        symbol: 'AAPL',
+        range: '1y',
+        interval: '1d',
+        source: 'local',
+        parameters: { fastWindow: 8, slowWindow: 21 },
+        finalEquity: 51000,
+        totalReturnPct: 2,
+        maxDrawdownPct: 1,
+        sharpeRatio: 1.2,
+        tradeCount: 2,
+        winRatePct: 50
+      }]
+    })));
+
+    const result = await getExperimentRuns({ fetcher });
+
+    expect(fetcher).toHaveBeenCalledWith('/api/experiments/runs');
+    expect(result[0].strategy).toBe('ma_crossover');
   });
 
   it('includes portfolio backtest parameters', async () => {

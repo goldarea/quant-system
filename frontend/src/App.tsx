@@ -18,9 +18,10 @@ import {
 } from '@arco-design/web-react';
 import { IconDashboard, IconDelete, IconPlus, IconStar, IconSync } from '@arco-design/web-react/icon';
 
-import { ApiError, getHealth, getHistory, getIndicators, getPaperAccount, getParameterSweep, getPortfolioBacktest, getQuote, getStrategies, getStrategyBacktest, importHistoryCsv, resetPaperAccount, searchSymbols, submitPaperOrder, updatePaperRiskLimits } from './api/client';
+import { ApiError, getExperimentRuns, getHealth, getHistory, getIndicators, getPaperAccount, getParameterSweep, getPortfolioBacktest, getQuote, getStrategies, getStrategyBacktest, importHistoryCsv, resetPaperAccount, searchSymbols, submitPaperOrder, updatePaperRiskLimits } from './api/client';
 import type {
   BacktestResponse,
+  ExperimentRun,
   HealthResponse,
   HistoryInterval,
   HistoryRange,
@@ -97,6 +98,7 @@ export default function App() {
   const [indicators, setIndicators] = useState<IndicatorsResponse | null>(null);
   const [backtest, setBacktest] = useState<BacktestResponse | null>(null);
   const [parameterSweep, setParameterSweep] = useState<ParameterSweepResponse | null>(null);
+  const [experimentRuns, setExperimentRuns] = useState<ExperimentRun[]>([]);
   const [strategies, setStrategies] = useState<StrategyDefinition[]>([]);
   const [strategyId, setStrategyId] = useState('ma_crossover');
   const [strategyParameters, setStrategyParameters] = useState<Record<string, number | string>>({});
@@ -110,6 +112,7 @@ export default function App() {
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const [backtestError, setBacktestError] = useState<string | null>(null);
   const [sweepError, setSweepError] = useState<string | null>(null);
+  const [experimentError, setExperimentError] = useState<string | null>(null);
   const [portfolioBacktestError, setPortfolioBacktestError] = useState<string | null>(null);
   const [paperError, setPaperError] = useState<string | null>(null);
   const [paperSide, setPaperSide] = useState<'buy' | 'sell'>('buy');
@@ -120,6 +123,7 @@ export default function App() {
   const [backtestLoading, setBacktestLoading] = useState(false);
   const [sweepLoading, setSweepLoading] = useState(false);
   const [portfolioBacktestLoading, setPortfolioBacktestLoading] = useState(false);
+  const [experimentLoading, setExperimentLoading] = useState(false);
   const [paperLoading, setPaperLoading] = useState(false);
   const [refreshToken, setRefreshToken] = useState(0);
   const [visibleAverages, setVisibleAverages] = useState({ ma5: true, ma20: true, ma60: false });
@@ -173,6 +177,18 @@ export default function App() {
     }
   }, [selected]);
 
+  const refreshExperimentRuns = useCallback(async () => {
+    setExperimentLoading(true);
+    setExperimentError(null);
+    try {
+      setExperimentRuns(await getExperimentRuns());
+    } catch (runsError) {
+      setExperimentError(errorMessage(runsError));
+    } finally {
+      setExperimentLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     getHealth()
       .then(setHealth)
@@ -194,7 +210,8 @@ export default function App() {
         setPaperMaxPositionPct(account.risk.limits.maxPositionValuePct);
       })
       .catch((accountError) => setPaperError(errorMessage(accountError)));
-  }, []);
+    refreshExperimentRuns();
+  }, [refreshExperimentRuns]);
 
   useEffect(() => {
     runSearch('AAPL');
@@ -253,7 +270,10 @@ export default function App() {
       parameters: strategyParameters
     })
       .then((nextBacktest) => {
-        if (!cancelled) setBacktest(nextBacktest);
+        if (!cancelled) {
+          setBacktest(nextBacktest);
+          refreshExperimentRuns();
+        }
       })
       .catch((dataError) => {
         if (!cancelled) {
@@ -268,7 +288,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [selected, selectedStrategy, strategyId, range, interval, strategyParamSignature, refreshToken]);
+  }, [selected, selectedStrategy, strategyId, range, interval, strategyParamSignature, refreshToken, refreshExperimentRuns]);
 
   const portfolioSymbols = useMemo(() => watchlist.map((item) => item.symbol), [watchlist]);
 
@@ -802,6 +822,50 @@ export default function App() {
             ) : (
               <Empty description="暂无回测结果" />
             )}
+            </Spin>
+          </Card>
+
+          <Card bordered={false} className="panel backtest-panel">
+            <div className="indicator-toolbar">
+              <Space wrap>
+                <Text bold>实验记录</Text>
+                <Tag>{experimentRuns.length} runs</Tag>
+              </Space>
+              <Button size="small" loading={experimentLoading} onClick={() => void refreshExperimentRuns()}>
+                刷新
+              </Button>
+            </div>
+            <Spin loading={experimentLoading} block>
+              {experimentError && (
+                <Alert
+                  className="backtest-alert"
+                  type="error"
+                  title="实验记录加载失败"
+                  content={experimentError}
+                  showIcon
+                />
+              )}
+              <List
+                size="small"
+                className="backtest-trades"
+                dataSource={experimentRuns.slice(0, 8)}
+                noDataElement={<Empty description="暂无实验记录，运行策略回测后自动保存摘要" />}
+                render={(run) => (
+                  <List.Item key={run.id}>
+                    <Space wrap>
+                      <Tag color="arcoblue">{run.strategy}</Tag>
+                      <Text>{run.symbol}</Text>
+                      <Text type="secondary">{run.range}/{run.interval}</Text>
+                      <Text type="secondary">return {run.totalReturnPct}%</Text>
+                      <Text type="secondary">equity {run.finalEquity}</Text>
+                      <Text type="secondary">drawdown {run.maxDrawdownPct}%</Text>
+                      <Text type="secondary">sharpe {run.sharpeRatio}</Text>
+                      <Text type="secondary">trades {run.tradeCount}</Text>
+                      <Text type="secondary">{run.time}</Text>
+                    </Space>
+                  </List.Item>
+                )}
+              />
             </Spin>
           </Card>
 

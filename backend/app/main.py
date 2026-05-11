@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from app.models import ApiError, HealthResponse, HistoryImportResponse, PaperOrderRequest, PaperRiskLimitsRequest
 from app.services.backtest import run_ma_crossover_backtest
 from app.services.csv_import import parse_history_csv
+from app.services.experiments import ExperimentService
 from app.services.indicators import build_indicators
 from app.services.paper_trading import PaperTradingService
 from app.services.parameter_sweep import run_ma_parameter_sweep
@@ -18,6 +19,7 @@ from app.services.market_data import MarketDataService
 app = FastAPI(title="Quant System API", version="0.1.0")
 service = MarketDataService()
 paper_service = PaperTradingService()
+experiment_service = ExperimentService()
 
 
 def ok(data: Any) -> dict[str, Any]:
@@ -100,27 +102,43 @@ def strategy_backtest(
     slippagePct: float = Query(default=0),
 ):
     history_response = service.get_history(symbol, range, interval)
-    return ok(run_strategy_backtest(
+    parameters = {
+        "fastWindow": fastWindow,
+        "slowWindow": slowWindow,
+        "rsiPeriod": rsiPeriod,
+        "oversold": oversold,
+        "overbought": overbought,
+        "macdFast": macdFast,
+        "macdSlow": macdSlow,
+        "macdSignal": macdSignal,
+        "initialCapital": initialCapital,
+        "feeRatePct": feeRatePct,
+        "slippagePct": slippagePct,
+    }
+    response = run_strategy_backtest(
         strategy,
         history_response.instrument,
         history_response.range,
         history_response.interval,
         history_response.source,
         history_response.bars,
-        {
-            "fastWindow": fastWindow,
-            "slowWindow": slowWindow,
-            "rsiPeriod": rsiPeriod,
-            "oversold": oversold,
-            "overbought": overbought,
-            "macdFast": macdFast,
-            "macdSlow": macdSlow,
-            "macdSignal": macdSignal,
-            "initialCapital": initialCapital,
-            "feeRatePct": feeRatePct,
-            "slippagePct": slippagePct,
-        },
-    ))
+        parameters,
+    )
+    experiment_service.record(
+        strategy,
+        history_response.instrument.symbol,
+        history_response.range,
+        history_response.interval,
+        history_response.source,
+        parameters,
+        response,
+    )
+    return ok(response)
+
+
+@app.get("/api/experiments/runs")
+def experiment_runs():
+    return ok(experiment_service.list_runs())
 
 
 @app.get("/api/backtest")

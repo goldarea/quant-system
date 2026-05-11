@@ -120,6 +120,7 @@ Routes:
 - `GET /api/indicators?symbol=AAPL&range=1y&interval=1d`
 - `GET /api/strategies`
 - `GET /api/backtest/run?strategy=ma_crossover&symbol=AAPL&range=1y&interval=1d`
+- `GET /api/experiments/runs`
 - `GET /api/backtest?symbol=AAPL&range=1y&interval=1d&feeRatePct=0.1&slippagePct=0.2`
 - `GET /api/backtest/sweep?symbol=AAPL&range=1y&interval=1d&fastMin=3&fastMax=10&slowMin=15&slowMax=30`
 - `GET /api/backtest/portfolio?symbols=AAPL,MSFT&range=1y&interval=1d`
@@ -138,7 +139,10 @@ The dashboard now selects backtest strategies from `/api/strategies` and renders
 parameter controls from the returned schema. Registered strategies include MA
 crossover, RSI reversal, MACD trend, and buy-and-hold; `/api/backtest/run`
 executes the selected strategy while the original `/api/backtest` route remains
-available for MA crossover compatibility. The dashboard can also run MA crossover
+available for MA crossover compatibility. Successful strategy runs are also kept
+in a local in-memory experiment ledger exposed by `/api/experiments/runs`, and
+the dashboard renders recent runs with strategy, symbol, parameters, and key
+performance metrics. The dashboard can also run MA crossover
 parameter sweeps across fast/slow window ranges, ranking combinations by return,
 Sharpe, and drawdown so batch results can be compared without manual retuning.
 The backtest report includes annualized
@@ -147,8 +151,8 @@ metrics, and a buy-and-hold benchmark comparison. The dashboard also runs an
 equal-weight portfolio backtest for browser-local watchlist symbols, showing
 combined equity, final positions, weights, and per-symbol returns. The backtest
 uses current close prices, applies percentage fees and slippage deterministically,
-does not short sell, and does not persist strategy runs; it is intended as a
-first local analysis baseline.
+does not short sell, and stores only in-memory experiment summaries for the
+current backend process; it is intended as a first local analysis baseline.
 
 If an upstream provider is unavailable, the backend can return deterministic
 demo bars marked with `source: "demo"` so the UI remains usable. Successful live
@@ -188,3 +192,4 @@ priority is:
    panel.
 6. Parameter sweep is in place for MA crossover fast/slow window result
    comparison.
+7. Experiment tracking is in place for recent in-memory strategy run summaries.

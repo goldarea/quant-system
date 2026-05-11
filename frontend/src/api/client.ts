@@ -1,6 +1,7 @@
 import type {
   ApiEnvelope,
   BacktestResponse,
+  ExperimentRun,
   HealthResponse,
   HistoryImportResponse,
   HistoryInterval,
@@ -157,6 +158,10 @@ export function getStrategyBacktest(params: StrategyBacktestParams, options?: Cl
     ['interval', params.interval],
     ...Object.entries(params.parameters).map(([key, value]) => [key, value.toString()] as [string, string])
   ])}`, options);
+}
+
+export function getExperimentRuns(options?: ClientOptions) {
+  return request<ExperimentRun[]>('/api/experiments/runs', options);
 }
 
 export function getPortfolioBacktest(params: PortfolioBacktestParams, options?: ClientOptions) {
