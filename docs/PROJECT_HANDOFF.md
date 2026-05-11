@@ -205,7 +205,7 @@ Status: completed. `HistoryResponse` now includes a `quality` report with duplic
 
 ### Phase 11: Paper Trading Layer
 
-Status: completed. The backend now exposes `/api/paper/account`, `/api/paper/orders`, `/api/paper/risk`, and `/api/paper/reset` for one in-memory simulated account. Market orders execute against the latest quote, update cash/positions/fills/orders, and reject insufficient buying power, insufficient sell quantity, oversized single orders, and oversized single-symbol positions. The frontend renders a paper-trading panel with account metrics, configurable risk exposure/limits, order entry, positions, and recent order status. Real broker integration remains out of scope.
+Status: completed. The backend now exposes `/api/paper/account`, `/api/paper/orders`, `/api/paper/risk`, and `/api/paper/reset` for one in-memory simulated account. Market orders execute against the latest quote, update cash/positions/fills/orders, and reject insufficient buying power, insufficient sell quantity, oversized single orders, and oversized single-symbol positions. The frontend renders a paper-trading panel with account metrics, configurable risk exposure/limits, order entry, positions, recent order status, and audit events for submissions/fills/rejections/risk updates/resets. Real broker integration remains out of scope.
 
 ### Longer-term Gaps Versus Mature Quant Platforms
 

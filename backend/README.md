@@ -90,10 +90,11 @@ FastAPI process. `POST /api/paper/orders` accepts market buy/sell orders,
 executes them against the latest quote, records orders and fills, updates
 positions, and rejects orders that exceed buying power, available quantity,
 single-order value limits, or single-position value limits. Account snapshots
-include risk status with gross exposure and active limit values, and `POST /api/paper/risk`
-updates the local max-order and max-position percentages. `POST /api/paper/reset`
-restores the default cash-only account. No broker API or real execution is
-involved.
+include risk status with gross exposure and active limit values, plus recent
+audit events for order submissions, fills, rejections, risk-limit updates, and
+resets. `POST /api/paper/risk` updates the local max-order and max-position
+percentages. `POST /api/paper/reset` restores the default cash-only account. No
+broker API or real execution is involved.
 
 ## Data Providers
 

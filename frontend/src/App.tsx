@@ -1054,6 +1054,22 @@ export default function App() {
                       </List.Item>
                     )}
                   />
+                  <List
+                    size="small"
+                    className="backtest-trades"
+                    dataSource={paperAccount.audit.slice(0, 6)}
+                    noDataElement={<Empty description="暂无审计事件" />}
+                    render={(event) => (
+                      <List.Item key={event.id}>
+                        <Space wrap>
+                          <Tag color={event.type.includes('rejected') ? 'red' : event.type.includes('filled') ? 'green' : 'arcoblue'}>{event.type}</Tag>
+                          <Text>{event.symbol ?? '-'}</Text>
+                          <Text type="secondary">{event.message}</Text>
+                          <Text type="secondary">{event.time}</Text>
+                        </Space>
+                      </List.Item>
+                    )}
+                  />
                 </>
               ) : (
                 <Empty description="暂无模拟账户数据" />

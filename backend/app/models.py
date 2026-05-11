@@ -332,6 +332,15 @@ class PaperFill(BaseModel):
     time: str
 
 
+class PaperAuditEvent(BaseModel):
+    id: str
+    type: str
+    message: str
+    time: str
+    symbol: str | None = None
+    orderId: str | None = None
+
+
 class PaperRiskLimits(BaseModel):
     maxOrderValuePct: float
     maxPositionValuePct: float
@@ -356,6 +365,7 @@ class PaperAccountResponse(BaseModel):
     orders: list[PaperOrder]
     fills: list[PaperFill]
     risk: PaperRiskStatus
+    audit: list[PaperAuditEvent]
 
 
 class PaperOrderRequest(BaseModel):

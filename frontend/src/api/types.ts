@@ -299,6 +299,15 @@ export interface PaperFill {
   time: string;
 }
 
+export interface PaperAuditEvent {
+  id: string;
+  type: string;
+  message: string;
+  time: string;
+  symbol?: string | null;
+  orderId?: string | null;
+}
+
 export interface PaperRiskLimits {
   maxOrderValuePct: number;
   maxPositionValuePct: number;
@@ -320,6 +329,7 @@ export interface PaperAccountResponse {
   orders: PaperOrder[];
   fills: PaperFill[];
   risk: PaperRiskStatus;
+  audit: PaperAuditEvent[];
 }
 
 export interface PaperOrderRequest {

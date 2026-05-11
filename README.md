@@ -160,9 +160,10 @@ series; the dashboard renders these checks in a data-quality panel.
 
 The dashboard also includes a local paper-trading panel backed by simulated
 cash, positions, orders, and fills. Market paper orders execute against the
-latest quote, apply configurable buying-power, single-order value, single-position value, and
-position-quantity checks, and remain local to the FastAPI process; no real broker
-integration is performed.
+latest quote, apply configurable buying-power, single-order value,
+single-position value, and position-quantity checks, and append audit events for
+submissions, fills, rejections, risk updates, and resets. All state remains local
+to the FastAPI process; no real broker integration is performed.
 
 CSV imports can be sent from the dashboard or posted as `text/csv` to
 `/api/history/import`. Required headers are `time,open,high,low,close,volume`;

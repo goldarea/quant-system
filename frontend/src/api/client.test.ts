@@ -158,7 +158,8 @@ describe('api client', () => {
           maxOrderValue: 250,
           maxPositionValue: 500,
           limits: { maxOrderValuePct: 25, maxPositionValuePct: 50 }
-        }
+        },
+        audit: []
       }
     })));
 

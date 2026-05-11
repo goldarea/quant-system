@@ -3,8 +3,9 @@ from uuid import uuid4
 
 from app.models import (
     Instrument,
-    PaperAccountResponse,
     PaperAccountSummary,
+    PaperAccountResponse,
+    PaperAuditEvent,
     PaperFill,
     PaperOrder,
     PaperOrderRequest,
@@ -30,6 +31,7 @@ class PaperTradingService:
         self.positions: dict[str, PaperPosition] = {}
         self.orders: list[PaperOrder] = []
         self.fills: list[PaperFill] = []
+        self.audit: list[PaperAuditEvent] = []
 
     def reset(self) -> PaperAccountResponse:
         self.cash = self.initial_cash
@@ -37,6 +39,8 @@ class PaperTradingService:
         self.positions = {}
         self.orders = []
         self.fills = []
+        self.audit = []
+        self._audit("account_reset", "Paper account reset")
         return self.snapshot()
 
     def snapshot(self) -> PaperAccountResponse:
@@ -56,6 +60,7 @@ class PaperTradingService:
             positions=positions,
             orders=self.orders[-20:][::-1],
             fills=self.fills[-20:][::-1],
+            audit=self.audit[-20:][::-1],
             risk=PaperRiskStatus(
                 grossExposure=_round(market_value),
                 grossExposurePct=_round((market_value / equity) * 100) if equity > 0 else 0,
@@ -93,6 +98,7 @@ class PaperTradingService:
             submittedAt=now,
         )
         self.orders.append(order)
+        self._audit("order_submitted", f"Submitted {side} order for {order.quantity} {symbol}", symbol, order.id)
         self._fill_order(order, quote.price, now)
         return self.snapshot()
 
@@ -105,6 +111,7 @@ class PaperTradingService:
             raise ValidationApiError("maxOrderValuePct must be less than or equal to maxPositionValuePct")
         self.max_order_value_pct = float(max_order_value_pct)
         self.max_position_value_pct = float(max_position_value_pct)
+        self._audit("risk_updated", f"Updated risk limits to order {max_order_value_pct}% and position {max_position_value_pct}%")
         return self.snapshot()
 
     def mark_to_market(self, quote: Quote) -> PaperAccountResponse:
@@ -125,17 +132,14 @@ class PaperTradingService:
 
         if order.side == "buy":
             if value > self.cash:
-                order.status = "rejected"
-                order.message = "Insufficient buying power"
+                self._reject_order(order, "Insufficient buying power")
                 return
             if value > equity * self.max_order_value_pct / 100:
-                order.status = "rejected"
-                order.message = "Order value exceeds risk limit"
+                self._reject_order(order, "Order value exceeds risk limit")
                 return
             existing_market_value = existing.marketValue if existing else 0.0
             if existing_market_value + value > equity * self.max_position_value_pct / 100:
-                order.status = "rejected"
-                order.message = "Position value exceeds risk limit"
+                self._reject_order(order, "Position value exceeds risk limit")
                 return
             previous_quantity = existing.quantity if existing else 0.0
             previous_cost = existing.averageCost if existing else 0.0
@@ -145,8 +149,7 @@ class PaperTradingService:
             self.positions[order.symbol] = self._position(order.symbol, next_quantity, next_average_cost, price)
         else:
             if existing is None or existing.quantity < order.quantity:
-                order.status = "rejected"
-                order.message = "Insufficient position quantity"
+                self._reject_order(order, "Insufficient position quantity")
                 return
             self.cash += value
             self.realized_pnl += (price - existing.averageCost) * order.quantity
@@ -168,6 +171,22 @@ class PaperTradingService:
             price=_round(price),
             value=_round(value),
             time=time,
+        ))
+        self._audit("order_filled", f"Filled {order.side} order for {order.quantity} {order.symbol} at {_round(price)}", order.symbol, order.id)
+
+    def _reject_order(self, order: PaperOrder, message: str) -> None:
+        order.status = "rejected"
+        order.message = message
+        self._audit("order_rejected", message, order.symbol, order.id)
+
+    def _audit(self, event_type: str, message: str, symbol: str | None = None, order_id: str | None = None) -> None:
+        self.audit.append(PaperAuditEvent(
+            id=str(uuid4()),
+            type=event_type,
+            message=message,
+            time=datetime.now(UTC).isoformat(),
+            symbol=symbol,
+            orderId=order_id,
         ))
 
     def _position(self, symbol: str, quantity: float, average_cost: float, last_price: float) -> PaperPosition:

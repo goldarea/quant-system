@@ -28,6 +28,7 @@ def test_paper_account_endpoint_returns_initial_state():
         assert payload["data"]["risk"]["maxOrderValue"] == 250
         assert payload["data"]["risk"]["maxPositionValue"] == 500
         assert payload["data"]["positions"] == []
+        assert payload["data"]["audit"] == []
     finally:
         main_module.paper_service = previous_paper_service
 
@@ -52,6 +53,7 @@ def test_paper_order_fills_market_buy_and_sell(tmp_path):
         assert buy_payload["data"]["positions"][0]["quantity"] == 10
         assert buy_payload["data"]["orders"][0]["status"] == "filled"
         assert buy_payload["data"]["fills"][0]["value"] == 100
+        assert [event["type"] for event in buy_payload["data"]["audit"][:2]] == ["order_filled", "order_submitted"]
 
         sell_response = client.post("/api/paper/orders", json={"symbol": "AAPL", "side": "sell", "quantity": 4})
         sell_payload = sell_response.json()
@@ -109,6 +111,8 @@ def test_paper_order_rejects_order_risk_limit(tmp_path):
         assert payload["data"]["account"]["cash"] == 1000
         assert payload["data"]["orders"][0]["status"] == "rejected"
         assert payload["data"]["orders"][0]["message"] == "Order value exceeds risk limit"
+        assert payload["data"]["audit"][0]["type"] == "order_rejected"
+        assert payload["data"]["audit"][0]["message"] == "Order value exceeds risk limit"
     finally:
         main_module.service = previous_service
         main_module.paper_service = previous_paper_service
@@ -145,6 +149,21 @@ def test_paper_order_rejects_position_risk_limit(tmp_path):
         main_module.paper_service = previous_paper_service
 
 
+def test_paper_reset_records_audit_event():
+    previous_paper_service = main_module.paper_service
+    main_module.paper_service = PaperTradingService(initial_cash=1000)
+    client = TestClient(app)
+
+    try:
+        response = client.post("/api/paper/reset")
+        payload = response.json()
+
+        assert response.status_code == 200
+        assert payload["data"]["audit"][0]["type"] == "account_reset"
+    finally:
+        main_module.paper_service = previous_paper_service
+
+
 def test_paper_risk_endpoint_updates_limits():
     previous_paper_service = main_module.paper_service
     main_module.paper_service = PaperTradingService(initial_cash=1000)
@@ -159,6 +178,7 @@ def test_paper_risk_endpoint_updates_limits():
         assert payload["data"]["risk"]["limits"]["maxPositionValuePct"] == 80
         assert payload["data"]["risk"]["maxOrderValue"] == 400
         assert payload["data"]["risk"]["maxPositionValue"] == 800
+        assert payload["data"]["audit"][0]["type"] == "risk_updated"
     finally:
         main_module.paper_service = previous_paper_service
 
