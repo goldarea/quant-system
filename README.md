@@ -121,6 +121,8 @@ Routes:
 - `GET /api/strategies`
 - `GET /api/backtest/run?strategy=ma_crossover&symbol=AAPL&range=1y&interval=1d`
 - `GET /api/experiments/runs`
+- `DELETE /api/experiments/runs/{id}`
+- `DELETE /api/experiments/runs`
 - `GET /api/backtest?symbol=AAPL&range=1y&interval=1d&feeRatePct=0.1&slippagePct=0.2`
 - `GET /api/backtest/sweep?symbol=AAPL&range=1y&interval=1d&fastMin=3&fastMax=10&slowMin=15&slowMax=30`
 - `GET /api/backtest/portfolio?symbols=AAPL,MSFT&range=1y&interval=1d`
@@ -141,8 +143,8 @@ crossover, RSI reversal, MACD trend, and buy-and-hold; `/api/backtest/run`
 executes the selected strategy while the original `/api/backtest` route remains
 available for MA crossover compatibility. Successful strategy runs are also kept
 in a local SQLite-backed experiment ledger exposed by `/api/experiments/runs`, and
-the dashboard renders recent runs with strategy, symbol, parameters, and key
-performance metrics. The dashboard can also run MA crossover
+the dashboard renders recent runs with strategy, symbol, parameters, key
+performance metrics, filter controls, and local delete/clear actions. The dashboard can also run MA crossover
 parameter sweeps across fast/slow window ranges, ranking combinations by return,
 Sharpe, and drawdown so batch results can be compared without manual retuning.
 The backtest report includes annualized

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { ApiError, getBacktest, getExperimentRuns, getHistory, getPaperAccount, getParameterSweep, getPortfolioBacktest, getStrategies, getStrategyBacktest, searchSymbols, submitPaperOrder, updatePaperRiskLimits } from './client';
+import { ApiError, clearExperimentRuns, deleteExperimentRun, getBacktest, getExperimentRuns, getHistory, getPaperAccount, getParameterSweep, getPortfolioBacktest, getStrategies, getStrategyBacktest, searchSymbols, submitPaperOrder, updatePaperRiskLimits } from './client';
 
 describe('api client', () => {
   it('unwraps successful API envelopes', async () => {
@@ -205,6 +205,16 @@ describe('api client', () => {
 
     expect(fetcher).toHaveBeenCalledWith('/api/experiments/runs');
     expect(result[0].strategy).toBe('ma_crossover');
+  });
+
+  it('deletes experiment runs', async () => {
+    const fetcher = vi.fn(async () => new Response(JSON.stringify({ ok: true, data: [] })));
+
+    await deleteExperimentRun('run/1', { fetcher });
+    await clearExperimentRuns({ fetcher });
+
+    expect(fetcher).toHaveBeenNthCalledWith(1, '/api/experiments/runs/run%2F1', { method: 'DELETE' });
+    expect(fetcher).toHaveBeenNthCalledWith(2, '/api/experiments/runs', { method: 'DELETE' });
   });
 
   it('includes portfolio backtest parameters', async () => {

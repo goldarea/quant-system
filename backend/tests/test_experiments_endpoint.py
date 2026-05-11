@@ -115,3 +115,34 @@ def test_experiment_runs_persist_across_service_instances(tmp_path):
     finally:
         main_module.service = previous_service
         main_module.experiment_service = previous_experiment_service
+
+
+def test_experiment_run_delete_endpoints_return_remaining_runs(tmp_path):
+    previous_service = main_module.service
+    previous_experiment_service = main_module.experiment_service
+    main_module.service = MarketDataService(
+        providers={"US": _provider},
+        cache=JsonCache(tmp_path / "cache"),
+        history_store=HistoryStore(tmp_path / "history.sqlite3"),
+    )
+    main_module.experiment_service = ExperimentService(HistoryStore(tmp_path / "experiments.sqlite3"))
+    client = TestClient(app)
+
+    try:
+        client.get("/api/backtest/run", params={"strategy": "buy_and_hold", "symbol": "AAPL", "range": "1mo", "interval": "1d"})
+        client.get("/api/backtest/run", params={"strategy": "rsi_reversal", "symbol": "MSFT", "range": "1mo", "interval": "1d"})
+        runs = client.get("/api/experiments/runs").json()["data"]
+
+        delete_response = client.delete(f"/api/experiments/runs/{runs[0]['id']}")
+        delete_payload = delete_response.json()
+        clear_response = client.delete("/api/experiments/runs")
+        clear_payload = clear_response.json()
+
+        assert delete_response.status_code == 200
+        assert len(delete_payload["data"]) == 1
+        assert delete_payload["data"][0]["id"] == runs[1]["id"]
+        assert clear_response.status_code == 200
+        assert clear_payload["data"] == []
+    finally:
+        main_module.service = previous_service
+        main_module.experiment_service = previous_experiment_service

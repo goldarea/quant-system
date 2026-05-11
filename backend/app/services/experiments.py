@@ -42,3 +42,11 @@ class ExperimentService:
 
     def list_runs(self) -> list[ExperimentRun]:
         return self.store.list_experiment_runs(self.max_runs)
+
+    def delete_run(self, run_id: str) -> list[ExperimentRun]:
+        self.store.delete_experiment_run(run_id)
+        return self.list_runs()
+
+    def clear_runs(self) -> list[ExperimentRun]:
+        self.store.clear_experiment_runs()
+        return self.list_runs()

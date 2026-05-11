@@ -4,6 +4,7 @@ import {
   Card,
   Checkbox,
   Empty,
+  Input,
   InputNumber,
   Layout,
   List,
@@ -18,7 +19,7 @@ import {
 } from '@arco-design/web-react';
 import { IconDashboard, IconDelete, IconPlus, IconStar, IconSync } from '@arco-design/web-react/icon';
 
-import { ApiError, getExperimentRuns, getHealth, getHistory, getIndicators, getPaperAccount, getParameterSweep, getPortfolioBacktest, getQuote, getStrategies, getStrategyBacktest, importHistoryCsv, resetPaperAccount, searchSymbols, submitPaperOrder, updatePaperRiskLimits } from './api/client';
+import { ApiError, clearExperimentRuns, deleteExperimentRun, getExperimentRuns, getHealth, getHistory, getIndicators, getPaperAccount, getParameterSweep, getPortfolioBacktest, getQuote, getStrategies, getStrategyBacktest, importHistoryCsv, resetPaperAccount, searchSymbols, submitPaperOrder, updatePaperRiskLimits } from './api/client';
 import type {
   BacktestResponse,
   ExperimentRun,
@@ -124,6 +125,7 @@ export default function App() {
   const [sweepLoading, setSweepLoading] = useState(false);
   const [portfolioBacktestLoading, setPortfolioBacktestLoading] = useState(false);
   const [experimentLoading, setExperimentLoading] = useState(false);
+  const [experimentFilter, setExperimentFilter] = useState('');
   const [paperLoading, setPaperLoading] = useState(false);
   const [refreshToken, setRefreshToken] = useState(0);
   const [visibleAverages, setVisibleAverages] = useState({ ma5: true, ma20: true, ma60: false });
@@ -145,7 +147,38 @@ export default function App() {
     [strategyParameters]
   );
 
+  const filteredExperimentRuns = useMemo(() => {
+    const normalized = experimentFilter.trim().toLowerCase();
+    if (!normalized) return experimentRuns;
+    return experimentRuns.filter((run) => [run.strategy, run.symbol, run.range, run.interval]
+      .some((value) => value.toLowerCase().includes(normalized)));
+  }, [experimentFilter, experimentRuns]);
+
   const selectedInWatchlist = selected ? watchlist.some((item) => item.symbol === selected.symbol) : false;
+
+  const deleteExperiment = useCallback(async (id: string) => {
+    setExperimentLoading(true);
+    setExperimentError(null);
+    try {
+      setExperimentRuns(await deleteExperimentRun(id));
+    } catch (deleteError) {
+      setExperimentError(errorMessage(deleteError));
+    } finally {
+      setExperimentLoading(false);
+    }
+  }, []);
+
+  const clearExperiments = useCallback(async () => {
+    setExperimentLoading(true);
+    setExperimentError(null);
+    try {
+      setExperimentRuns(await clearExperimentRuns());
+    } catch (clearError) {
+      setExperimentError(errorMessage(clearError));
+    } finally {
+      setExperimentLoading(false);
+    }
+  }, []);
 
   const updateWatchlist = useCallback((nextItems: Instrument[]) => {
     setWatchlist(nextItems);
@@ -831,11 +864,28 @@ export default function App() {
                 <Text bold>实验记录</Text>
                 <Tag>{experimentRuns.length} runs</Tag>
               </Space>
-              <Button size="small" loading={experimentLoading} onClick={() => void refreshExperimentRuns()}>
-                刷新
-              </Button>
+              <Space wrap>
+                <Button size="small" loading={experimentLoading} onClick={() => void refreshExperimentRuns()}>
+                  刷新
+                </Button>
+                <Button size="small" status="danger" disabled={experimentRuns.length === 0} onClick={() => void clearExperiments()}>
+                  清空
+                </Button>
+              </Space>
             </div>
             <Spin loading={experimentLoading} block>
+              <div className="backtest-controls">
+                <Space wrap>
+                  <Input
+                    size="small"
+                    placeholder="筛选 strategy / symbol / range"
+                    value={experimentFilter}
+                    onChange={setExperimentFilter}
+                    style={{ width: 240 }}
+                  />
+                  <Tag>{filteredExperimentRuns.length} shown</Tag>
+                </Space>
+              </div>
               {experimentError && (
                 <Alert
                   className="backtest-alert"
@@ -848,7 +898,7 @@ export default function App() {
               <List
                 size="small"
                 className="backtest-trades"
-                dataSource={experimentRuns.slice(0, 8)}
+                dataSource={filteredExperimentRuns.slice(0, 8)}
                 noDataElement={<Empty description="暂无实验记录，运行策略回测后自动保存摘要" />}
                 render={(run) => (
                   <List.Item key={run.id}>
@@ -862,6 +912,9 @@ export default function App() {
                       <Text type="secondary">sharpe {run.sharpeRatio}</Text>
                       <Text type="secondary">trades {run.tradeCount}</Text>
                       <Text type="secondary">{run.time}</Text>
+                      <Button size="mini" status="danger" onClick={() => void deleteExperiment(run.id)}>
+                        删除
+                      </Button>
                     </Space>
                   </List.Item>
                 )}

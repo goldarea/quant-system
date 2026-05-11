@@ -164,6 +164,14 @@ export function getExperimentRuns(options?: ClientOptions) {
   return request<ExperimentRun[]>('/api/experiments/runs', options);
 }
 
+export function deleteExperimentRun(id: string, options?: ClientOptions) {
+  return request<ExperimentRun[]>(`/api/experiments/runs/${encodeURIComponent(id)}`, options, { method: 'DELETE' });
+}
+
+export function clearExperimentRuns(options?: ClientOptions) {
+  return request<ExperimentRun[]>('/api/experiments/runs', options, { method: 'DELETE' });
+}
+
 export function getPortfolioBacktest(params: PortfolioBacktestParams, options?: ClientOptions) {
   return request<PortfolioBacktestResponse>(`/api/backtest/portfolio?${buildQuery([
     ['symbols', params.symbols.join(',')],

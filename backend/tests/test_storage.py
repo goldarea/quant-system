@@ -94,3 +94,30 @@ def test_experiment_runs_respect_limit_and_newest_first(tmp_path):
 
     loaded = store.list_experiment_runs(limit=2)
     assert [run.id for run in loaded] == ["run-2", "run-1"]
+
+
+def test_experiment_runs_delete_one_and_clear_all(tmp_path):
+    store = HistoryStore(tmp_path / "history.sqlite3")
+    for index in range(2):
+        store.add_experiment_run(ExperimentRun(
+            id=f"run-{index}",
+            time=f"2024-01-0{index + 1}T00:00:00Z",
+            strategy="buy_and_hold",
+            symbol="AAPL",
+            range="1mo",
+            interval="1d",
+            source="local",
+            parameters={},
+            finalEquity=100000,
+            totalReturnPct=0,
+            maxDrawdownPct=0,
+            sharpeRatio=0,
+            tradeCount=1,
+            winRatePct=100,
+        ))
+
+    assert store.delete_experiment_run("run-0") == 1
+    assert [run.id for run in store.list_experiment_runs()] == ["run-1"]
+    assert store.delete_experiment_run("missing") == 0
+    assert store.clear_experiment_runs() == 1
+    assert store.list_experiment_runs() == []

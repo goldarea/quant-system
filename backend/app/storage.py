@@ -185,6 +185,18 @@ class HistoryStore:
             )
             connection.commit()
 
+    def delete_experiment_run(self, run_id: str) -> int:
+        with self._connect() as connection:
+            cursor = connection.execute("DELETE FROM experiment_runs WHERE id = ?", (run_id,))
+            connection.commit()
+            return cursor.rowcount
+
+    def clear_experiment_runs(self) -> int:
+        with self._connect() as connection:
+            cursor = connection.execute("DELETE FROM experiment_runs")
+            connection.commit()
+            return cursor.rowcount
+
     def list_experiment_runs(self, limit: int = 50) -> list[ExperimentRun]:
         with self._connect() as connection:
             rows = connection.execute(

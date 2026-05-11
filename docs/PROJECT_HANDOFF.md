@@ -84,6 +84,8 @@ Routes:
 - `GET /api/backtest?symbol=AAPL&range=1mo&interval=1d&feeRatePct=0.1&slippagePct=0.2`
 - `GET /api/backtest/sweep?symbol=AAPL&range=1mo&interval=1d&fastMin=3&fastMax=10&slowMin=15&slowMax=30`
 - `GET /api/experiments/runs`
+- `DELETE /api/experiments/runs/{id}`
+- `DELETE /api/experiments/runs`
 - `GET /api/paper/account`
 - `POST /api/paper/orders`
 - `POST /api/paper/risk`
@@ -211,7 +213,7 @@ Status: completed. The backend now exposes `/api/paper/account`, `/api/paper/ord
 
 ### Phase 12: Experiment Tracking
 
-Status: completed. Strategy backtests run through `/api/backtest/run` now append a persisted SQLite experiment summary containing strategy id, symbol, range, interval, source, parameters, and headline metrics. The backend exposes recent summaries through `/api/experiments/runs`, and the frontend renders an experiment-record panel so recent parameter/strategy runs can be compared after backend restarts without copying the current result manually.
+Status: completed. Strategy backtests run through `/api/backtest/run` now append a persisted SQLite experiment summary containing strategy id, symbol, range, interval, source, parameters, and headline metrics. The backend exposes recent summaries through `/api/experiments/runs`, supports deleting one run or clearing the local experiment ledger, and the frontend renders an experiment-record panel with filtering plus delete/clear controls so recent parameter/strategy runs can be compared after backend restarts without copying the current result manually.
 
 ### Longer-term Gaps Versus Mature Quant Platforms
 

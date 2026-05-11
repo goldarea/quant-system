@@ -141,6 +141,16 @@ def experiment_runs():
     return ok(experiment_service.list_runs())
 
 
+@app.delete("/api/experiments/runs/{run_id}")
+def delete_experiment_run(run_id: str):
+    return ok(experiment_service.delete_run(run_id))
+
+
+@app.delete("/api/experiments/runs")
+def clear_experiment_runs():
+    return ok(experiment_service.clear_runs())
+
+
 @app.get("/api/backtest")
 def backtest(
     symbol: str | None = Query(default=None),

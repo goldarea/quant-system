@@ -47,6 +47,8 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 - `GET /api/strategies`
 - `GET /api/backtest/run?strategy=ma_crossover&symbol=AAPL&range=1mo&interval=1d`
 - `GET /api/experiments/runs`
+- `DELETE /api/experiments/runs/{id}`
+- `DELETE /api/experiments/runs`
 - `GET /api/backtest?symbol=AAPL&range=1mo&interval=1d&feeRatePct=0.1&slippagePct=0.2`
 - `GET /api/backtest/sweep?symbol=AAPL&range=1mo&interval=1d&fastMin=3&fastMax=10&slowMin=15&slowMax=30`
 - `GET /api/backtest/portfolio?symbols=AAPL,MSFT&range=1mo&interval=1d`
@@ -64,7 +66,9 @@ the selected strategy; registered strategies are `ma_crossover`, `rsi_reversal`,
 available as the compatibility endpoint for MA crossover. Successful strategy
 runs are stored in the local SQLite experiment ledger;
 `GET /api/experiments/runs` returns recent run summaries with strategy, symbol,
-parameters, source, and headline performance metrics.
+parameters, source, and headline performance metrics. Individual runs can be
+removed with `DELETE /api/experiments/runs/{id}`, and all local experiment runs
+can be cleared with `DELETE /api/experiments/runs`.
 
 `GET /api/backtest` runs a minimal long-only moving-average crossover backtest on
 the same bars returned by `/api/history`. Query params include `fastWindow`,
