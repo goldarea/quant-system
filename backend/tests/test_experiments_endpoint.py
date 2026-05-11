@@ -25,7 +25,7 @@ def test_strategy_backtest_records_experiment_run(tmp_path):
         cache=JsonCache(tmp_path / "cache"),
         history_store=HistoryStore(tmp_path / "history.sqlite3"),
     )
-    main_module.experiment_service = ExperimentService()
+    main_module.experiment_service = ExperimentService(HistoryStore(tmp_path / "experiments.sqlite3"))
     client = TestClient(app)
 
     try:
@@ -73,7 +73,7 @@ def test_experiment_runs_are_returned_newest_first(tmp_path):
         cache=JsonCache(tmp_path / "cache"),
         history_store=HistoryStore(tmp_path / "history.sqlite3"),
     )
-    main_module.experiment_service = ExperimentService()
+    main_module.experiment_service = ExperimentService(HistoryStore(tmp_path / "experiments.sqlite3"))
     client = TestClient(app)
 
     try:
@@ -85,6 +85,33 @@ def test_experiment_runs_are_returned_newest_first(tmp_path):
         assert response.status_code == 200
         assert [run["strategy"] for run in payload["data"]] == ["rsi_reversal", "buy_and_hold"]
         assert [run["symbol"] for run in payload["data"]] == ["MSFT", "AAPL"]
+    finally:
+        main_module.service = previous_service
+        main_module.experiment_service = previous_experiment_service
+
+
+def test_experiment_runs_persist_across_service_instances(tmp_path):
+    database_path = tmp_path / "experiments.sqlite3"
+    previous_service = main_module.service
+    previous_experiment_service = main_module.experiment_service
+    main_module.service = MarketDataService(
+        providers={"US": _provider},
+        cache=JsonCache(tmp_path / "cache"),
+        history_store=HistoryStore(tmp_path / "history.sqlite3"),
+    )
+    main_module.experiment_service = ExperimentService(HistoryStore(database_path))
+    client = TestClient(app)
+
+    try:
+        client.get("/api/backtest/run", params={"strategy": "buy_and_hold", "symbol": "AAPL", "range": "1mo", "interval": "1d"})
+        main_module.experiment_service = ExperimentService(HistoryStore(database_path))
+        response = client.get("/api/experiments/runs")
+        payload = response.json()
+
+        assert response.status_code == 200
+        assert len(payload["data"]) == 1
+        assert payload["data"][0]["strategy"] == "buy_and_hold"
+        assert payload["data"][0]["symbol"] == "AAPL"
     finally:
         main_module.service = previous_service
         main_module.experiment_service = previous_experiment_service

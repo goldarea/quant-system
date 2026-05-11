@@ -211,7 +211,7 @@ Status: completed. The backend now exposes `/api/paper/account`, `/api/paper/ord
 
 ### Phase 12: Experiment Tracking
 
-Status: completed. Strategy backtests run through `/api/backtest/run` now append an in-memory experiment summary containing strategy id, symbol, range, interval, source, parameters, and headline metrics. The backend exposes recent summaries through `/api/experiments/runs`, and the frontend renders an experiment-record panel so recent parameter/strategy runs can be compared without copying the current result manually.
+Status: completed. Strategy backtests run through `/api/backtest/run` now append a persisted SQLite experiment summary containing strategy id, symbol, range, interval, source, parameters, and headline metrics. The backend exposes recent summaries through `/api/experiments/runs`, and the frontend renders an experiment-record panel so recent parameter/strategy runs can be compared after backend restarts without copying the current result manually.
 
 ### Longer-term Gaps Versus Mature Quant Platforms
 

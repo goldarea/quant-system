@@ -140,7 +140,7 @@ parameter controls from the returned schema. Registered strategies include MA
 crossover, RSI reversal, MACD trend, and buy-and-hold; `/api/backtest/run`
 executes the selected strategy while the original `/api/backtest` route remains
 available for MA crossover compatibility. Successful strategy runs are also kept
-in a local in-memory experiment ledger exposed by `/api/experiments/runs`, and
+in a local SQLite-backed experiment ledger exposed by `/api/experiments/runs`, and
 the dashboard renders recent runs with strategy, symbol, parameters, and key
 performance metrics. The dashboard can also run MA crossover
 parameter sweeps across fast/slow window ranges, ranking combinations by return,
@@ -151,8 +151,8 @@ metrics, and a buy-and-hold benchmark comparison. The dashboard also runs an
 equal-weight portfolio backtest for browser-local watchlist symbols, showing
 combined equity, final positions, weights, and per-symbol returns. The backtest
 uses current close prices, applies percentage fees and slippage deterministically,
-does not short sell, and stores only in-memory experiment summaries for the
-current backend process; it is intended as a first local analysis baseline.
+does not short sell, and stores experiment summaries in the local SQLite cache so
+they survive backend restarts; it is intended as a first local analysis baseline.
 
 If an upstream provider is unavailable, the backend can return deterministic
 demo bars marked with `source: "demo"` so the UI remains usable. Successful live
@@ -192,4 +192,4 @@ priority is:
    panel.
 6. Parameter sweep is in place for MA crossover fast/slow window result
    comparison.
-7. Experiment tracking is in place for recent in-memory strategy run summaries.
+7. Experiment tracking is in place for recent persisted strategy run summaries.

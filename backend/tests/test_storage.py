@@ -1,6 +1,6 @@
 import sqlite3
 
-from app.models import Bar, Instrument
+from app.models import Bar, ExperimentRun, Instrument
 from app.storage import HistoryStore
 
 
@@ -45,3 +45,52 @@ def test_history_store_upserts_without_duplicates(tmp_path):
     with sqlite3.connect(database_path) as connection:
         count = connection.execute("SELECT COUNT(*) FROM history_bars").fetchone()[0]
     assert count == 2
+
+
+def test_experiment_runs_roundtrip(tmp_path):
+    store = HistoryStore(tmp_path / "history.sqlite3")
+    run = ExperimentRun(
+        id="run-1",
+        time="2024-01-01T00:00:00Z",
+        strategy="ma_crossover",
+        symbol="AAPL",
+        range="1y",
+        interval="1d",
+        source="local",
+        parameters={"fastWindow": 5, "slowWindow": 20, "label": "baseline"},
+        finalEquity=101000,
+        totalReturnPct=1,
+        maxDrawdownPct=2,
+        sharpeRatio=1.5,
+        tradeCount=3,
+        winRatePct=66.67,
+    )
+
+    store.add_experiment_run(run)
+
+    loaded = store.list_experiment_runs()
+    assert loaded == [run]
+
+
+def test_experiment_runs_respect_limit_and_newest_first(tmp_path):
+    store = HistoryStore(tmp_path / "history.sqlite3")
+    for index in range(3):
+        store.add_experiment_run(ExperimentRun(
+            id=f"run-{index}",
+            time=f"2024-01-0{index + 1}T00:00:00Z",
+            strategy="buy_and_hold",
+            symbol="AAPL",
+            range="1mo",
+            interval="1d",
+            source="local",
+            parameters={"initialCapital": 100000 + index},
+            finalEquity=100000 + index,
+            totalReturnPct=index,
+            maxDrawdownPct=0,
+            sharpeRatio=0,
+            tradeCount=1,
+            winRatePct=100,
+        ))
+
+    loaded = store.list_experiment_runs(limit=2)
+    assert [run.id for run in loaded] == ["run-2", "run-1"]

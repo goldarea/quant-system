@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import json
 import sqlite3
 from pathlib import Path
 from time import time
 
-from app.models import Bar, HistoryInterval, HistoryRange, Instrument
+from app.models import Bar, ExperimentRun, HistoryInterval, HistoryRange, Instrument
 
 
 class HistoryStore:
@@ -39,6 +40,27 @@ class HistoryStore:
               source TEXT NOT NULL,
               saved_at REAL NOT NULL,
               PRIMARY KEY (provider_symbol, range_value, interval, time)
+            )
+            """
+        )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS experiment_runs (
+              id TEXT PRIMARY KEY,
+              time TEXT NOT NULL,
+              strategy TEXT NOT NULL,
+              symbol TEXT NOT NULL,
+              range_value TEXT NOT NULL,
+              interval TEXT NOT NULL,
+              source TEXT NOT NULL,
+              parameters_json TEXT NOT NULL,
+              final_equity REAL NOT NULL,
+              total_return_pct REAL NOT NULL,
+              max_drawdown_pct REAL NOT NULL,
+              sharpe_ratio REAL NOT NULL,
+              trade_count INTEGER NOT NULL,
+              win_rate_pct REAL NOT NULL,
+              saved_at REAL NOT NULL
             )
             """
         )
@@ -132,3 +154,67 @@ class HistoryStore:
                 values,
             )
             connection.commit()
+
+    def add_experiment_run(self, run: ExperimentRun) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO experiment_runs (
+                  id, time, strategy, symbol, range_value, interval, source,
+                  parameters_json, final_equity, total_return_pct, max_drawdown_pct,
+                  sharpe_ratio, trade_count, win_rate_pct, saved_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    run.id,
+                    run.time,
+                    run.strategy,
+                    run.symbol,
+                    run.range,
+                    run.interval,
+                    run.source,
+                    json.dumps(run.parameters, ensure_ascii=False, sort_keys=True),
+                    run.finalEquity,
+                    run.totalReturnPct,
+                    run.maxDrawdownPct,
+                    run.sharpeRatio,
+                    run.tradeCount,
+                    run.winRatePct,
+                    time(),
+                ),
+            )
+            connection.commit()
+
+    def list_experiment_runs(self, limit: int = 50) -> list[ExperimentRun]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT id, time, strategy, symbol, range_value, interval, source,
+                  parameters_json, final_equity, total_return_pct, max_drawdown_pct,
+                  sharpe_ratio, trade_count, win_rate_pct
+                FROM experiment_runs
+                ORDER BY saved_at DESC, time DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+
+        return [
+            ExperimentRun(
+                id=row["id"],
+                time=row["time"],
+                strategy=row["strategy"],
+                symbol=row["symbol"],
+                range=row["range_value"],
+                interval=row["interval"],
+                source=row["source"],
+                parameters=json.loads(row["parameters_json"]),
+                finalEquity=row["final_equity"],
+                totalReturnPct=row["total_return_pct"],
+                maxDrawdownPct=row["max_drawdown_pct"],
+                sharpeRatio=row["sharpe_ratio"],
+                tradeCount=row["trade_count"],
+                winRatePct=row["win_rate_pct"],
+            )
+            for row in rows
+        ]

@@ -62,7 +62,7 @@ frontend to render dynamic parameter controls. `GET /api/backtest/run` executes
 the selected strategy; registered strategies are `ma_crossover`, `rsi_reversal`,
 `macd_trend`, and `buy_and_hold`. The original `GET /api/backtest` route remains
 available as the compatibility endpoint for MA crossover. Successful strategy
-runs are stored in an in-memory experiment ledger for the current FastAPI process;
+runs are stored in the local SQLite experiment ledger;
 `GET /api/experiments/runs` returns recent run summaries with strategy, symbol,
 parameters, source, and headline performance metrics.
 
@@ -71,9 +71,9 @@ the same bars returned by `/api/history`. Query params include `fastWindow`,
 `slowWindow`, `initialCapital`, `feeRatePct`, and `slippagePct`; defaults are
 MA5/MA20, initial capital `100000`, and zero costs. Trades execute from the
 current close with deterministic percentage fee/slippage accounting, no short
-selling, and no persisted strategy run records. The response includes a
-professional report with daily returns, annualized return/volatility, Sharpe,
-Calmar, max drawdown period, trade-quality metrics, and a buy-and-hold benchmark.
+selling. The response includes a professional report with daily returns, annualized
+return/volatility, Sharpe, Calmar, max drawdown period, trade-quality metrics,
+and a buy-and-hold benchmark.
 
 `GET /api/backtest/sweep` runs the MA crossover strategy across fast/slow window
 ranges, skips invalid combinations where the slow window is not greater than the

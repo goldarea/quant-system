@@ -2,12 +2,13 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 from app.models import BacktestResponse, ExperimentRun, HistoryInterval, HistoryRange
+from app.storage import HistoryStore
 
 
 class ExperimentService:
-    def __init__(self, max_runs: int = 50) -> None:
+    def __init__(self, store: HistoryStore | None = None, max_runs: int = 50) -> None:
+        self.store = store or HistoryStore()
         self.max_runs = max_runs
-        self.runs: list[ExperimentRun] = []
 
     def record(
         self,
@@ -36,9 +37,8 @@ class ExperimentService:
             tradeCount=summary.tradeCount,
             winRatePct=summary.winRatePct,
         )
-        self.runs.append(run)
-        self.runs = self.runs[-self.max_runs:]
+        self.store.add_experiment_run(run)
         return run
 
     def list_runs(self) -> list[ExperimentRun]:
-        return self.runs[::-1]
+        return self.store.list_experiment_runs(self.max_runs)
