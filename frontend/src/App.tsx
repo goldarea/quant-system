@@ -40,7 +40,7 @@ import HistoryTable from './components/HistoryTable';
 import KLineChart from './components/KLineChart';
 import QuoteSummary from './components/QuoteSummary';
 import SymbolSearch from './components/SymbolSearch';
-import { experimentRunsToCsv } from './experimentExport';
+import { experimentRunsToCsv, formatExperimentParameters } from './experiments';
 
 const { Header, Content, Sider } = Layout;
 const { Text, Title } = Typography;
@@ -967,6 +967,7 @@ export default function App() {
                       <Text type="secondary">drawdown {run.maxDrawdownPct}%</Text>
                       <Text type="secondary">sharpe {run.sharpeRatio}</Text>
                       <Text type="secondary">trades {run.tradeCount}</Text>
+                      <Text type="secondary">params {formatExperimentParameters(run.parameters)}</Text>
                       <Text type="secondary">{run.time}</Text>
                       <Button size="mini" onClick={() => restoreExperiment(run)}>
                         复用参数

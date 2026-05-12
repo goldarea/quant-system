@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { experimentRunsToCsv } from './experimentExport';
+import { experimentRunsToCsv, formatExperimentParameters } from './experiments';
 import type { ExperimentRun } from './api/types';
 
 const runs: ExperimentRun[] = [{
@@ -20,7 +20,12 @@ const runs: ExperimentRun[] = [{
   winRatePct: 50
 }];
 
-describe('experimentRunsToCsv', () => {
+describe('experiment helpers', () => {
+  it('formats experiment parameters for compact display', () => {
+    expect(formatExperimentParameters(runs[0].parameters)).toBe('fastWindow=8, slowWindow=21, note=fast,slow');
+    expect(formatExperimentParameters({})).toBe('-');
+  });
+
   it('exports experiment runs with escaped parameters', () => {
     const csv = experimentRunsToCsv(runs);
 

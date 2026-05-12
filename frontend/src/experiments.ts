@@ -1,6 +1,6 @@
 import type { ExperimentRun } from './api/types';
 
-const experimentCsvColumns = [
+export const experimentCsvColumns = [
   'id',
   'time',
   'strategy',
@@ -16,6 +16,12 @@ const experimentCsvColumns = [
   'tradeCount',
   'winRatePct'
 ];
+
+export function formatExperimentParameters(parameters: ExperimentRun['parameters']) {
+  const entries = Object.entries(parameters);
+  if (entries.length === 0) return '-';
+  return entries.map(([key, value]) => `${key}=${value}`).join(', ');
+}
 
 function csvValue(value: string | number) {
   const text = String(value);

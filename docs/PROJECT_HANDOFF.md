@@ -187,7 +187,7 @@ Invoke-WebRequest http://127.0.0.1:5173/api/quote?symbol=AAPL -UseBasicParsing
 - Data-quality reporting added for duplicate, missing, invalid, and stale history bars.
 - Paper-trading layer added with simulated account, positions, orders, fills, and dashboard controls.
 - Backend `/api/backtest/sweep` and frontend parameter-sweep panel added for MA crossover fast/slow batch comparison.
-- Backend `/api/experiments/runs` and frontend experiment-record panel added for persisted strategy run summaries with filtering, sorting, CSV export, saved-parameter reuse, and delete/clear controls.
+- Backend `/api/experiments/runs` and frontend experiment-record panel added for persisted strategy run summaries with visible parameters, filtering, sorting, CSV export, saved-parameter reuse, and delete/clear controls.
 
 ## Recommended Next Work
 
@@ -213,7 +213,7 @@ Status: completed. The backend now exposes `/api/paper/account`, `/api/paper/ord
 
 ### Phase 12: Experiment Tracking
 
-Status: completed. Strategy backtests run through `/api/backtest/run` now append a persisted SQLite experiment summary containing strategy id, symbol, range, interval, source, parameters, and headline metrics. The backend exposes recent summaries through `/api/experiments/runs` with optional strategy/symbol filters and metric sorting, supports deleting one run or clearing the local experiment ledger, and the frontend renders an experiment-record panel with server-side filter/sort, CSV export, saved-parameter reuse, and delete/clear controls so recent parameter/strategy runs can be compared after backend restarts or moved into spreadsheet/notebook workflows without copying the current result manually.
+Status: completed. Strategy backtests run through `/api/backtest/run` now append a persisted SQLite experiment summary containing strategy id, symbol, range, interval, source, parameters, and headline metrics. The backend exposes recent summaries through `/api/experiments/runs` with optional strategy/symbol filters and metric sorting, supports deleting one run or clearing the local experiment ledger, and the frontend renders an experiment-record panel with visible saved parameters, server-side filter/sort, CSV export, saved-parameter reuse, and delete/clear controls so recent parameter/strategy runs can be compared after backend restarts or moved into spreadsheet/notebook workflows without copying the current result manually.
 
 ### Longer-term Gaps Versus Mature Quant Platforms
 
