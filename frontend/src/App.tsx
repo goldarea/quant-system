@@ -129,6 +129,7 @@ export default function App() {
   const [experimentFilter, setExperimentFilter] = useState('');
   const [experimentSortBy, setExperimentSortBy] = useState('time');
   const [experimentSortDir, setExperimentSortDir] = useState<'asc' | 'desc'>('desc');
+  const [showAllExperiments, setShowAllExperiments] = useState(false);
   const [paperLoading, setPaperLoading] = useState(false);
   const [refreshToken, setRefreshToken] = useState(0);
   const [visibleAverages, setVisibleAverages] = useState({ ma5: true, ma20: true, ma60: false });
@@ -151,6 +152,7 @@ export default function App() {
   );
 
   const selectedInWatchlist = selected ? watchlist.some((item) => item.symbol === selected.symbol) : false;
+  const visibleExperimentRuns = showAllExperiments ? experimentRuns : experimentRuns.slice(0, 8);
 
   const deleteExperiment = useCallback(async (id: string) => {
     setExperimentLoading(true);
@@ -899,6 +901,9 @@ export default function App() {
                 <Button size="small" disabled={experimentRuns.length === 0} onClick={exportExperiments}>
                   导出 CSV
                 </Button>
+                <Button size="small" disabled={experimentRuns.length <= 8} onClick={() => setShowAllExperiments((current) => !current)}>
+                  {showAllExperiments ? '收起' : '查看全部'}
+                </Button>
                 <Button size="small" status="danger" disabled={experimentRuns.length === 0} onClick={() => void clearExperiments()}>
                   清空
                 </Button>
@@ -939,7 +944,7 @@ export default function App() {
                   <Button size="small" onClick={() => void refreshExperimentRuns()}>
                     应用
                   </Button>
-                  <Tag>{experimentRuns.length} shown</Tag>
+                  <Tag>{visibleExperimentRuns.length}/{experimentRuns.length} shown</Tag>
                 </Space>
               </div>
               {experimentError && (
@@ -954,7 +959,7 @@ export default function App() {
               <List
                 size="small"
                 className="backtest-trades"
-                dataSource={experimentRuns.slice(0, 8)}
+                dataSource={visibleExperimentRuns}
                 noDataElement={<Empty description="暂无实验记录，运行策略回测后自动保存摘要" />}
                 render={(run) => (
                   <List.Item key={run.id}>
