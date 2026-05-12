@@ -144,7 +144,7 @@ executes the selected strategy while the original `/api/backtest` route remains
 available for MA crossover compatibility. Successful strategy runs are also kept
 in a local SQLite-backed experiment ledger exposed by `/api/experiments/runs`, and
 the dashboard renders recent runs with strategy, symbol, parameters, key
-performance metrics, server-side filter/sort controls, and local delete/clear actions. The dashboard can also run MA crossover
+performance metrics, server-side filter/sort controls, CSV export, and local delete/clear actions. The dashboard can also run MA crossover
 parameter sweeps across fast/slow window ranges, ranking combinations by return,
 Sharpe, and drawdown so batch results can be compared without manual retuning.
 The backtest report includes annualized

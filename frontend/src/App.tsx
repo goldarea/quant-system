@@ -40,6 +40,7 @@ import HistoryTable from './components/HistoryTable';
 import KLineChart from './components/KLineChart';
 import QuoteSummary from './components/QuoteSummary';
 import SymbolSearch from './components/SymbolSearch';
+import { experimentRunsToCsv } from './experimentExport';
 
 const { Header, Content, Sider } = Layout;
 const { Text, Title } = Typography;
@@ -174,6 +175,17 @@ export default function App() {
       setExperimentLoading(false);
     }
   }, []);
+
+  const exportExperiments = useCallback(() => {
+    if (experimentRuns.length === 0) return;
+    const blob = new Blob([experimentRunsToCsv(experimentRuns)], { type: 'text/csv;charset=utf-8' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+    link.download = `quant-experiments-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }, [experimentRuns]);
 
   const updateWatchlist = useCallback((nextItems: Instrument[]) => {
     setWatchlist(nextItems);
@@ -868,6 +880,9 @@ export default function App() {
               <Space wrap>
                 <Button size="small" loading={experimentLoading} onClick={() => void refreshExperimentRuns()}>
                   刷新
+                </Button>
+                <Button size="small" disabled={experimentRuns.length === 0} onClick={exportExperiments}>
+                  导出 CSV
                 </Button>
                 <Button size="small" status="danger" disabled={experimentRuns.length === 0} onClick={() => void clearExperiments()}>
                   清空
