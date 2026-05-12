@@ -187,6 +187,21 @@ export default function App() {
     URL.revokeObjectURL(url);
   }, [experimentRuns]);
 
+  const restoreExperiment = useCallback((run: ExperimentRun) => {
+    setSelected((current) => (current?.symbol === run.symbol ? current : {
+      symbol: run.symbol,
+      name: run.symbol,
+      market: '',
+      currency: ''
+    }));
+    setQuery(run.symbol);
+    setRange(run.range);
+    setInterval(run.interval);
+    setStrategyId(run.strategy);
+    setStrategyParameters(run.parameters);
+    setRefreshToken((current) => current + 1);
+  }, []);
+
   const updateWatchlist = useCallback((nextItems: Instrument[]) => {
     setWatchlist(nextItems);
     saveWatchlist(nextItems);
@@ -953,6 +968,9 @@ export default function App() {
                       <Text type="secondary">sharpe {run.sharpeRatio}</Text>
                       <Text type="secondary">trades {run.tradeCount}</Text>
                       <Text type="secondary">{run.time}</Text>
+                      <Button size="mini" onClick={() => restoreExperiment(run)}>
+                        复用参数
+                      </Button>
                       <Button size="mini" status="danger" onClick={() => void deleteExperiment(run.id)}>
                         删除
                       </Button>
