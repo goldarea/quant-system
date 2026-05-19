@@ -137,6 +137,27 @@ symbols. The dashboard also includes a browser-local watchlist stored in
 upstream endpoints are suitable for personal research and
 prototyping, not licensed production real-time market data.
 
+Optional open-source provider adapters can be enabled in the FastAPI backend
+after installing the matching packages: set `QUANT_US_HISTORY_PROVIDER=yfinance`
+for US history via `yfinance`, and/or `QUANT_CN_HISTORY_PROVIDER=akshare` for CN
+A-share history via `akshare`. The default runtime remains Yahoo chart for US
+history and Eastmoney kline for CN history.
+
+Official Alpha Vantage history can be enabled by setting `ALPHAVANTAGE_API_KEY`
+and selecting `alphavantage` per market, for example
+`QUANT_US_HISTORY_PROVIDER=alphavantage` or a request override such as
+`providers=US:alphavantage,CN:alphavantage`.
+
+The frontend now includes provider selectors in the header, keeps the selected
+providers in browser storage, and marks optional providers as unavailable when
+their Python packages or credentials are not configured. The backend exposes
+`GET /api/providers` plus per-request overrides for history, quote, indicators,
+and backtest routes.
+
+If a saved provider is currently unavailable, the UI keeps the preference
+visible but routes requests through the healthy fallback provider until the
+dependency is installed.
+
 The dashboard now selects backtest strategies from `/api/strategies` and renders
 parameter controls from the returned schema. Registered strategies include MA
 crossover, RSI reversal, MACD trend, and buy-and-hold; `/api/backtest/run`

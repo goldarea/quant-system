@@ -161,6 +161,19 @@ Invoke-WebRequest http://127.0.0.1:5173/api/quote?symbol=AAPL -UseBasicParsing
   ECharts are bundled together. It does not block the current milestone.
 - Public web endpoints are suitable for personal research/prototyping, not
   licensed production real-time market data.
+- Optional open-source adapters can be enabled with
+  `QUANT_US_HISTORY_PROVIDER=yfinance` and/or
+  `QUANT_CN_HISTORY_PROVIDER=akshare` after installing the matching Python
+  packages.
+- Official Alpha Vantage history can be enabled with `ALPHAVANTAGE_API_KEY` and
+  `QUANT_US_HISTORY_PROVIDER=alphavantage`,
+  `QUANT_CN_HISTORY_PROVIDER=alphavantage`, or request-level overrides such as
+  `providers=US:alphavantage,CN:alphavantage`.
+- Frontend provider selectors, persisted provider choice, availability badges,
+  and `/api/providers` request-time overrides are now wired through the backend
+  history/quote/backtest routes. If a saved provider is unavailable, the UI
+  keeps the preference visible and falls back to the healthy provider until the
+  dependency is installed.
 - If live upstreams fail, deterministic demo data can be returned with
   `source: "demo"`.
 - Successful live history responses are persisted to `.cache/quant-system.sqlite3`
@@ -181,6 +194,11 @@ Invoke-WebRequest http://127.0.0.1:5173/api/quote?symbol=AAPL -UseBasicParsing
 - Root startup scripts added for backend and frontend.
 - Browser-local watchlist added in the frontend.
 - Yahoo and Eastmoney provider adapters implemented with demo fallback.
+- Optional yfinance and AkShare adapters implemented behind backend environment
+  variables.
+- Official Alpha Vantage adapter implemented behind `ALPHAVANTAGE_API_KEY`.
+- Runtime provider selection endpoint, install-status metadata, and UI controls
+  added for the active market-data source.
 - Backend `/api/indicators` and frontend MA/MACD/RSI indicator UI added.
 - Adjustable strategy backtest UI, equity curve chart, fee/slippage controls, K-line trade markers, professional report metrics, and `/api/backtest` endpoint added.
 - Strategy framework added with `/api/strategies`, `/api/backtest/run`, MA crossover, RSI reversal, MACD trend, buy-and-hold, and schema-driven frontend parameter controls.
@@ -224,4 +242,3 @@ Status: completed. Strategy backtests run through `/api/backtest/run` now append
 - Operations: scheduled jobs, monitoring, alerting, audit logs, permissions, and deployment packaging.
 
 Near-term priority order: Phase 7 first, then Phase 8, then Phase 9. Data quality work in Phase 10 can start earlier if backtest results become inconsistent or source data issues block research.
-

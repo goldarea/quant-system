@@ -4,7 +4,7 @@ from typing import Any
 from fastapi import FastAPI, Query, Request
 from fastapi.responses import JSONResponse
 
-from app.models import ApiError, HealthResponse, HistoryImportResponse, PaperOrderRequest, PaperRiskLimitsRequest
+from app.models import ApiError, HealthResponse, HistoryImportResponse, PaperOrderRequest, PaperRiskLimitsRequest, ProviderCatalogResponse
 from app.services.backtest import run_ma_crossover_backtest
 from app.services.csv_import import parse_history_csv
 from app.services.experiments import ExperimentService
@@ -13,7 +13,7 @@ from app.services.paper_trading import PaperTradingService
 from app.services.parameter_sweep import run_ma_parameter_sweep
 from app.services.portfolio_backtest import run_equal_weight_portfolio_backtest
 from app.services.strategies import list_strategies, run_strategy_backtest
-from app.services.market_data import MarketDataService
+from app.services.market_data import MarketDataService, parse_provider_overrides
 
 
 app = FastAPI(title="Quant System API", version="0.1.0")
@@ -48,13 +48,19 @@ def search(q: str = ""):
     return ok(service.search(q))
 
 
+@app.get("/api/providers")
+def providers():
+    return ok(ProviderCatalogResponse(markets=service.describe_providers()))
+
+
 @app.get("/api/history")
 def history(
     symbol: str | None = Query(default=None),
     range: str = Query(default="1y"),
     interval: str = Query(default="1d"),
+    providers: str | None = Query(default=None),
 ):
-    return ok(service.get_history(symbol, range, interval))
+    return ok(service.get_history(symbol, range, interval, parse_provider_overrides(providers)))
 
 
 @app.post("/api/history/import")
@@ -68,7 +74,7 @@ async def import_history(
     range_value, interval_value = service.validate_history_options(range, interval)
     content = (await request.body()).decode("utf-8-sig")
     bars = parse_history_csv(content)
-    service.history_store.set_history(instrument, range_value, interval_value, bars, "import")
+    service.history_store.set_history(instrument, range_value, interval_value, bars, "import", provider_key="import")
     return ok(HistoryImportResponse(
         instrument=instrument,
         range=range_value,
@@ -100,8 +106,10 @@ def strategy_backtest(
     initialCapital: float = Query(default=100000),
     feeRatePct: float = Query(default=0),
     slippagePct: float = Query(default=0),
+    providers: str | None = Query(default=None),
 ):
-    history_response = service.get_history(symbol, range, interval)
+    provider_overrides = parse_provider_overrides(providers)
+    history_response = service.get_history(symbol, range, interval, provider_overrides)
     parameters = {
         "fastWindow": fastWindow,
         "slowWindow": slowWindow,
@@ -166,8 +174,9 @@ def backtest(
     initialCapital: float = Query(default=100000),
     feeRatePct: float = Query(default=0),
     slippagePct: float = Query(default=0),
+    providers: str | None = Query(default=None),
 ):
-    history_response = service.get_history(symbol, range, interval)
+    history_response = service.get_history(symbol, range, interval, parse_provider_overrides(providers))
     return ok(run_ma_crossover_backtest(
         history_response.instrument,
         history_response.range,
@@ -194,8 +203,9 @@ def parameter_sweep(
     initialCapital: float = Query(default=100000),
     feeRatePct: float = Query(default=0),
     slippagePct: float = Query(default=0),
+    providers: str | None = Query(default=None),
 ):
-    history_response = service.get_history(symbol, range, interval)
+    history_response = service.get_history(symbol, range, interval, parse_provider_overrides(providers))
     return ok(run_ma_parameter_sweep(
         history_response.instrument,
         history_response.range,
@@ -218,9 +228,11 @@ def portfolio_backtest(
     range: str = Query(default="1y"),
     interval: str = Query(default="1d"),
     initialCapital: float = Query(default=100000),
+    providers: str | None = Query(default=None),
 ):
     symbol_list = [symbol.strip().upper() for symbol in symbols.split(",") if symbol.strip()]
-    histories = [service.get_history(symbol, range, interval) for symbol in symbol_list]
+    provider_overrides = parse_provider_overrides(providers)
+    histories = [service.get_history(symbol, range, interval, provider_overrides) for symbol in symbol_list]
     range_value, interval_value = service.validate_history_options(range, interval)
     return ok(run_equal_weight_portfolio_backtest(histories, range_value, interval_value, initialCapital))
 
@@ -231,9 +243,12 @@ def paper_account():
 
 
 @app.post("/api/paper/orders")
-def paper_order(request: PaperOrderRequest):
+def paper_order(
+    request: PaperOrderRequest,
+    providers: str | None = Query(default=None),
+):
     instrument = service.resolve(request.symbol)
-    quote_response = service.get_quote(instrument.symbol)
+    quote_response = service.get_quote(instrument.symbol, parse_provider_overrides(providers))
     return ok(paper_service.submit_order(request, instrument, quote_response))
 
 
@@ -248,8 +263,8 @@ def paper_reset():
 
 
 @app.get("/api/quote")
-def quote(symbol: str | None = Query(default=None)):
-    return ok(service.get_quote(symbol))
+def quote(symbol: str | None = Query(default=None), providers: str | None = Query(default=None)):
+    return ok(service.get_quote(symbol, parse_provider_overrides(providers)))
 
 
 @app.get("/api/indicators")
@@ -257,8 +272,9 @@ def indicators(
     symbol: str | None = Query(default=None),
     range: str = Query(default="1y"),
     interval: str = Query(default="1d"),
+    providers: str | None = Query(default=None),
 ):
-    history_response = service.get_history(symbol, range, interval)
+    history_response = service.get_history(symbol, range, interval, parse_provider_overrides(providers))
     return ok(build_indicators(
         history_response.instrument,
         history_response.range,

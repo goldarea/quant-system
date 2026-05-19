@@ -7,13 +7,14 @@ const { Text, Title } = Typography;
 
 interface QuoteSummaryProps {
   quote: Quote | null;
+  providerLabel?: string;
 }
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat('en-US').format(value);
 }
 
-export default function QuoteSummary({ quote }: QuoteSummaryProps) {
+export default function QuoteSummary({ quote, providerLabel }: QuoteSummaryProps) {
   if (!quote) {
     return (
       <Card className="panel" bordered={false}>
@@ -29,6 +30,7 @@ export default function QuoteSummary({ quote }: QuoteSummaryProps) {
           <Space align="center">
             <Title heading={5}>{quote.symbol}</Title>
             <Tag color={quote.source === 'demo' ? 'orange' : 'green'}>{quote.source}</Tag>
+            {providerLabel && <Tag color="arcoblue">{providerLabel}</Tag>}
             <Tag>{quote.market}</Tag>
           </Space>
           <Text type="secondary">{quote.name}</Text>

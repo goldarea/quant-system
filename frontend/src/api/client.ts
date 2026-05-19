@@ -13,6 +13,8 @@ import type {
   PaperRiskLimitsRequest,
   ParameterSweepResponse,
   PortfolioBacktestResponse,
+  ProviderCatalogResponse,
+  ProviderSelection,
   Quote,
   StrategyDefinition,
   Instrument
@@ -28,6 +30,7 @@ interface HistoryParams {
   symbol: string;
   range: HistoryRange;
   interval: HistoryInterval;
+  providers?: ProviderSelection;
 }
 
 interface BacktestParams extends HistoryParams {
@@ -65,6 +68,7 @@ interface PortfolioBacktestParams {
   range: HistoryRange;
   interval: HistoryInterval;
   initialCapital?: number;
+  providers?: ProviderSelection;
 }
 
 export class ApiError extends Error {
@@ -83,6 +87,15 @@ function buildQuery(params: Iterable<[string, string | undefined]>) {
     if (value !== undefined) query.set(key, value);
   });
   return query.toString();
+}
+
+function serializeProviders(providers?: ProviderSelection) {
+  if (!providers) return undefined;
+  const value = Object.entries(providers)
+    .filter(([, value]) => value)
+    .map(([market, value]) => `${market}:${value}`)
+    .join(',');
+  return value || undefined;
 }
 
 async function request<T>(path: string, options: ClientOptions = {}, init?: RequestInit): Promise<T> {
@@ -105,16 +118,24 @@ export function searchSymbols(query: string, options?: ClientOptions) {
   return request<Instrument[]>(`/api/search?${buildQuery([['q', query]])}`, options);
 }
 
+export function getProviders(options?: ClientOptions) {
+  return request<ProviderCatalogResponse>('/api/providers', options);
+}
+
 export function getHistory(params: HistoryParams, options?: ClientOptions) {
   return request<HistoryResponse>(`/api/history?${buildQuery([
     ['symbol', params.symbol],
     ['range', params.range],
-    ['interval', params.interval]
+    ['interval', params.interval],
+    ['providers', serializeProviders(params.providers)]
   ])}`, options);
 }
 
-export function getQuote(symbol: string, options?: ClientOptions) {
-  return request<Quote>(`/api/quote?${buildQuery([['symbol', symbol]])}`, options);
+export function getQuote(symbol: string, providers?: ProviderSelection, options?: ClientOptions) {
+  return request<Quote>(`/api/quote?${buildQuery([
+    ['symbol', symbol],
+    ['providers', serializeProviders(providers)]
+  ])}`, options);
 }
 
 export function getStrategies(options?: ClientOptions) {
@@ -125,7 +146,8 @@ export function getIndicators(params: HistoryParams, options?: ClientOptions) {
   return request<IndicatorsResponse>(`/api/indicators?${buildQuery([
     ['symbol', params.symbol],
     ['range', params.range],
-    ['interval', params.interval]
+    ['interval', params.interval],
+    ['providers', serializeProviders(params.providers)]
   ])}`, options);
 }
 
@@ -138,7 +160,8 @@ export function getBacktest(params: BacktestParams, options?: ClientOptions) {
     ['slowWindow', params.slowWindow?.toString()],
     ['initialCapital', params.initialCapital?.toString()],
     ['feeRatePct', params.feeRatePct?.toString()],
-    ['slippagePct', params.slippagePct?.toString()]
+    ['slippagePct', params.slippagePct?.toString()],
+    ['providers', serializeProviders(params.providers)]
   ])}`, options);
 }
 
@@ -153,7 +176,8 @@ export function getParameterSweep(params: ParameterSweepParams, options?: Client
     ['slowMax', params.slowMax?.toString()],
     ['initialCapital', params.initialCapital?.toString()],
     ['feeRatePct', params.feeRatePct?.toString()],
-    ['slippagePct', params.slippagePct?.toString()]
+    ['slippagePct', params.slippagePct?.toString()],
+    ['providers', serializeProviders(params.providers)]
   ])}`, options);
 }
 
@@ -163,6 +187,7 @@ export function getStrategyBacktest(params: StrategyBacktestParams, options?: Cl
     ['symbol', params.symbol],
     ['range', params.range],
     ['interval', params.interval],
+    ['providers', serializeProviders(params.providers)],
     ...Object.entries(params.parameters).map(([key, value]) => [key, value.toString()] as [string, string])
   ])}`, options);
 }
@@ -190,7 +215,8 @@ export function getPortfolioBacktest(params: PortfolioBacktestParams, options?: 
     ['symbols', params.symbols.join(',')],
     ['range', params.range],
     ['interval', params.interval],
-    ['initialCapital', params.initialCapital?.toString()]
+    ['initialCapital', params.initialCapital?.toString()],
+    ['providers', serializeProviders(params.providers)]
   ])}`, options);
 }
 
@@ -198,8 +224,11 @@ export function getPaperAccount(options?: ClientOptions) {
   return request<PaperAccountResponse>('/api/paper/account', options);
 }
 
-export function submitPaperOrder(order: PaperOrderRequest, options?: ClientOptions) {
-  return request<PaperAccountResponse>('/api/paper/orders', options, {
+export function submitPaperOrder(order: PaperOrderRequest, providers?: ProviderSelection, options?: ClientOptions) {
+  const query = buildQuery([
+    ['providers', serializeProviders(providers)]
+  ]);
+  return request<PaperAccountResponse>(query ? `/api/paper/orders?${query}` : '/api/paper/orders', options, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(order)

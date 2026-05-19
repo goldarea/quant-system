@@ -66,40 +66,57 @@ class HistoryStore:
         )
         connection.commit()
 
-    def _provider_symbol(self, instrument: Instrument) -> str:
-        return instrument.providerSymbol or instrument.symbol
+    def _provider_symbol(self, instrument: Instrument, provider_key: str | None = None) -> str:
+        base_symbol = instrument.providerSymbol or instrument.symbol
+        if provider_key:
+            return f"{provider_key}:{base_symbol}"
+        return base_symbol
 
     def get_history(
         self,
         instrument: Instrument,
         range_value: HistoryRange,
         interval: HistoryInterval,
+        provider_key: str | None = None,
     ) -> list[Bar] | None:
+        base_symbol = self._provider_symbol(instrument)
+        provider_symbols = [base_symbol]
+        if provider_key:
+            preferred_symbol = self._provider_symbol(instrument, provider_key)
+            provider_symbols = [preferred_symbol]
+            if preferred_symbol != base_symbol:
+                provider_symbols.append(base_symbol)
+            if provider_key != "import":
+                import_symbol = self._provider_symbol(instrument, "import")
+                if import_symbol not in provider_symbols:
+                    provider_symbols.append(import_symbol)
+
         with self._connect() as connection:
-            rows = connection.execute(
-                """
-                SELECT time, open, high, low, close, volume
-                FROM history_bars
-                WHERE provider_symbol = ? AND range_value = ? AND interval = ?
-                ORDER BY time ASC
-                """,
-                (self._provider_symbol(instrument), range_value, interval),
-            ).fetchall()
+            for provider_symbol in provider_symbols:
+                rows = connection.execute(
+                    """
+                    SELECT time, open, high, low, close, volume
+                    FROM history_bars
+                    WHERE provider_symbol = ? AND range_value = ? AND interval = ?
+                    ORDER BY time ASC
+                    """,
+                    (provider_symbol, range_value, interval),
+                ).fetchall()
 
-        if not rows:
-            return None
+                if rows:
+                    return [
+                        Bar(
+                            time=row["time"],
+                            open=row["open"],
+                            high=row["high"],
+                            low=row["low"],
+                            close=row["close"],
+                            volume=row["volume"],
+                        )
+                        for row in rows
+                    ]
 
-        return [
-            Bar(
-                time=row["time"],
-                open=row["open"],
-                high=row["high"],
-                low=row["low"],
-                close=row["close"],
-                volume=row["volume"],
-            )
-            for row in rows
-        ]
+        return None
 
     def set_history(
         self,
@@ -108,11 +125,12 @@ class HistoryStore:
         interval: HistoryInterval,
         bars: list[Bar],
         source: str,
+        provider_key: str | None = None,
     ) -> None:
         if not bars:
             return
 
-        provider_symbol = self._provider_symbol(instrument)
+        provider_symbol = self._provider_symbol(instrument, provider_key)
         saved_at = time()
         values = [
             (

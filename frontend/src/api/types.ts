@@ -10,6 +10,29 @@ export interface Instrument {
   providerSymbol?: string;
 }
 
+export interface ProviderOption {
+  id: string;
+  label: string;
+  description: string;
+  available: boolean;
+  dependency?: string | null;
+  installCommand?: string | null;
+  credentialEnv?: string | null;
+  setupHint?: string | null;
+}
+
+export interface MarketProviderConfig {
+  market: Market;
+  label: string;
+  defaultProvider: string;
+  activeProvider: string;
+  options: ProviderOption[];
+}
+
+export interface ProviderCatalogResponse {
+  markets: MarketProviderConfig[];
+}
+
 export interface Bar {
   time: string;
   open: number;
@@ -363,6 +386,7 @@ export interface HealthResponse {
 
 export type HistoryRange = '1mo' | '3mo' | '6mo' | '1y' | '5y' | 'max';
 export type HistoryInterval = '1d' | '1wk' | '1mo';
+export type ProviderSelection = Record<string, string>;
 
 export interface ApiErrorPayload {
   code: string;

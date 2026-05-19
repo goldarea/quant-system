@@ -44,6 +44,29 @@ class Instrument(BaseModel):
     providerSymbol: str | None = None
 
 
+class ProviderOption(BaseModel):
+    id: str
+    label: str
+    description: str
+    available: bool
+    dependency: str | None = None
+    installCommand: str | None = None
+    credentialEnv: str | None = None
+    setupHint: str | None = None
+
+
+class MarketProviderConfig(BaseModel):
+    market: str
+    label: str
+    defaultProvider: str
+    activeProvider: str
+    options: list[ProviderOption]
+
+
+class ProviderCatalogResponse(BaseModel):
+    markets: list[MarketProviderConfig]
+
+
 class Bar(BaseModel):
     time: str
     open: float

@@ -111,6 +111,33 @@ broker API or real execution is involved.
 US-market history uses the Yahoo chart endpoint when available. CN-market
 history uses the Eastmoney kline endpoint when available.
 
+Optional open-source and official adapters are available without changing
+application code:
+
+- US history: install `yfinance` and start the backend with
+  `QUANT_US_HISTORY_PROVIDER=yfinance`.
+- CN A-share history: install `akshare` and start the backend with
+  `QUANT_CN_HISTORY_PROVIDER=akshare`.
+- Official Alpha Vantage history: set `ALPHAVANTAGE_API_KEY` and use
+  `QUANT_US_HISTORY_PROVIDER=alphavantage`,
+  `QUANT_CN_HISTORY_PROVIDER=alphavantage`, or a request-level provider
+  override.
+- `GET /api/providers` returns the active provider catalog for the frontend,
+  including optional dependency/install and credential status.
+- Pass `providers=US:yfinance,CN:akshare` or
+  `providers=US:alphavantage,CN:alphavantage` to history, quote, indicator, and
+  backtest endpoints to switch the data source at request time.
+
+Example:
+
+```powershell
+python -m pip install yfinance akshare
+$env:ALPHAVANTAGE_API_KEY = "your-alpha-vantage-key"
+$env:QUANT_US_HISTORY_PROVIDER = "yfinance"
+$env:QUANT_CN_HISTORY_PROVIDER = "alphavantage"
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
 If an upstream request fails, the service returns deterministic demo bars with
 `source: "demo"` and a warning payload so the UI remains usable. Successful live
 history responses are persisted to `.cache/quant-system.sqlite3`; matching later

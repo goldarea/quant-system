@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { ApiError, clearExperimentRuns, deleteExperimentRun, getBacktest, getExperimentRuns, getHistory, getPaperAccount, getParameterSweep, getPortfolioBacktest, getStrategies, getStrategyBacktest, searchSymbols, submitPaperOrder, updatePaperRiskLimits } from './client';
+import { ApiError, clearExperimentRuns, deleteExperimentRun, getBacktest, getExperimentRuns, getHistory, getPaperAccount, getParameterSweep, getPortfolioBacktest, getProviders, getQuote, getStrategies, getStrategyBacktest, searchSymbols, submitPaperOrder, updatePaperRiskLimits } from './client';
 
 describe('api client', () => {
   it('unwraps successful API envelopes', async () => {
@@ -66,6 +66,45 @@ describe('api client', () => {
     }, { fetcher });
 
     expect(fetcher).toHaveBeenCalledWith('/api/backtest?symbol=AAPL&range=1y&interval=1d&fastWindow=8&slowWindow=21&initialCapital=50000&feeRatePct=0.1&slippagePct=0.2');
+  });
+
+  it('serializes provider selections and fetches provider catalog', async () => {
+    const fetcher = vi.fn(async () => new Response(JSON.stringify({
+      ok: true,
+      data: {
+        markets: [
+          {
+            market: 'US',
+            label: 'US market',
+            defaultProvider: 'yahoo',
+            activeProvider: 'yfinance',
+            options: [
+              { id: 'yahoo', label: 'Yahoo Finance', description: 'Public Yahoo chart endpoint', available: true },
+              { id: 'yfinance', label: 'yfinance', description: 'Open-source Python wrapper around Yahoo Finance', available: true }
+            ]
+          }
+        ]
+      }
+    })));
+
+    await getProviders({ fetcher });
+    await getHistory({
+      symbol: 'AAPL',
+      range: '1y',
+      interval: '1d',
+      providers: { US: 'yfinance', CN: 'akshare' }
+    }, { fetcher });
+    await getQuote('AAPL', { US: 'yfinance', CN: 'akshare' }, { fetcher });
+    await submitPaperOrder({ symbol: 'AAPL', side: 'buy', quantity: 10, type: 'market' }, { US: 'yfinance', CN: 'akshare' }, { fetcher });
+
+    expect(fetcher).toHaveBeenNthCalledWith(1, '/api/providers');
+    expect(fetcher).toHaveBeenNthCalledWith(2, '/api/history?symbol=AAPL&range=1y&interval=1d&providers=US%3Ayfinance%2CCN%3Aakshare');
+    expect(fetcher).toHaveBeenNthCalledWith(3, '/api/quote?symbol=AAPL&providers=US%3Ayfinance%2CCN%3Aakshare');
+    expect(fetcher).toHaveBeenNthCalledWith(4, '/api/paper/orders?providers=US%3Ayfinance%2CCN%3Aakshare', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ symbol: 'AAPL', side: 'buy', quantity: 10, type: 'market' })
+    });
   });
 
   it('fetches strategy definitions', async () => {
@@ -165,7 +204,7 @@ describe('api client', () => {
 
     await getPaperAccount({ fetcher });
     await updatePaperRiskLimits({ maxOrderValuePct: 40, maxPositionValuePct: 80 }, { fetcher });
-    await submitPaperOrder({ symbol: 'AAPL', side: 'buy', quantity: 10, type: 'market' }, { fetcher });
+    await submitPaperOrder({ symbol: 'AAPL', side: 'buy', quantity: 10, type: 'market' }, undefined, { fetcher });
 
     expect(fetcher).toHaveBeenNthCalledWith(1, '/api/paper/account');
     expect(fetcher).toHaveBeenNthCalledWith(2, '/api/paper/risk', {

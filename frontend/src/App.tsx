@@ -19,7 +19,7 @@ import {
 } from '@arco-design/web-react';
 import { IconDashboard, IconDelete, IconPlus, IconStar, IconSync } from '@arco-design/web-react/icon';
 
-import { ApiError, clearExperimentRuns, deleteExperimentRun, getExperimentRuns, getHealth, getHistory, getIndicators, getPaperAccount, getParameterSweep, getPortfolioBacktest, getQuote, getStrategies, getStrategyBacktest, importHistoryCsv, resetPaperAccount, searchSymbols, submitPaperOrder, updatePaperRiskLimits } from './api/client';
+import { ApiError, clearExperimentRuns, deleteExperimentRun, getExperimentRuns, getHealth, getHistory, getIndicators, getPaperAccount, getParameterSweep, getPortfolioBacktest, getProviders, getQuote, getStrategies, getStrategyBacktest, importHistoryCsv, resetPaperAccount, searchSymbols, submitPaperOrder, updatePaperRiskLimits } from './api/client';
 import type {
   BacktestResponse,
   ExperimentRun,
@@ -32,6 +32,9 @@ import type {
   PaperAccountResponse,
   ParameterSweepResponse,
   PortfolioBacktestResponse,
+  ProviderCatalogResponse,
+  MarketProviderConfig,
+  ProviderOption,
   Quote,
   StrategyDefinition
 } from './api/types';
@@ -41,6 +44,7 @@ import KLineChart from './components/KLineChart';
 import QuoteSummary from './components/QuoteSummary';
 import SymbolSearch from './components/SymbolSearch';
 import { experimentRunsToCsv, formatExperimentParameters } from './experiments';
+import { loadProviderSelection, providerSelectionFromCatalog, saveProviderSelection } from './providerSelection';
 
 const { Header, Content, Sider } = Layout;
 const { Text, Title } = Typography;
@@ -59,7 +63,70 @@ const intervals: Array<{ label: string; value: HistoryInterval }> = [
   { label: '月线', value: '1mo' }
 ];
 
+const fallbackProviderCatalog: ProviderCatalogResponse = {
+  markets: [
+    {
+      market: 'US',
+      label: 'US market',
+      defaultProvider: 'yahoo',
+      activeProvider: 'yahoo',
+      options: [
+        { id: 'yahoo', label: 'Yahoo Finance', description: 'Public Yahoo chart endpoint', available: true },
+        { id: 'yfinance', label: 'yfinance', description: 'Open-source Python wrapper around Yahoo Finance', available: false, dependency: 'yfinance', installCommand: 'pip install yfinance' },
+        { id: 'alphavantage', label: 'Alpha Vantage', description: 'Official Alpha Vantage market-data API', available: false, credentialEnv: 'ALPHAVANTAGE_API_KEY', setupHint: 'Set ALPHAVANTAGE_API_KEY to an Alpha Vantage API key.' }
+      ]
+    },
+    {
+      market: 'CN',
+      label: 'CN market',
+      defaultProvider: 'eastmoney',
+      activeProvider: 'eastmoney',
+      options: [
+        { id: 'eastmoney', label: 'Eastmoney', description: 'Public Eastmoney kline endpoint', available: true },
+        { id: 'akshare', label: 'AkShare', description: 'Open-source data integration library for A-share history', available: false, dependency: 'akshare', installCommand: 'pip install akshare' },
+        { id: 'alphavantage', label: 'Alpha Vantage', description: 'Official Alpha Vantage market-data API', available: false, credentialEnv: 'ALPHAVANTAGE_API_KEY', setupHint: 'Set ALPHAVANTAGE_API_KEY to an Alpha Vantage API key.' }
+      ]
+    }
+  ]
+};
+
 const watchlistStorageKey = 'quant-system.watchlist';
+
+function providerLabel(config: MarketProviderConfig | undefined, providerId: string | undefined) {
+  if (!providerId) return '-';
+  const option = config?.options.find((item) => item.id === providerId);
+  return option?.label || providerId;
+}
+
+function providerSelectValue(
+  config: MarketProviderConfig | undefined,
+  preference: string | undefined,
+  resolved: string | undefined
+) {
+  if (preference && config?.options.some((option) => option.id === preference)) {
+    return preference;
+  }
+  return resolved || config?.activeProvider || '';
+}
+
+function providerOptionLabel(option: ProviderOption) {
+  if (option.available) return option.label;
+  if (option.credentialEnv) return `${option.label} · 未配置 ${option.credentialEnv}`;
+  return `${option.label} · ${option.dependency ? `未安装 ${option.dependency}` : '不可用'}`;
+}
+
+function providerStatusTitle(option: ProviderOption) {
+  if (option.available) return option.description;
+  if (option.setupHint) return `${option.description}。${option.setupHint}`;
+  if (option.installCommand) return `${option.description}。安装命令：${option.installCommand}`;
+  return option.description;
+}
+
+function providerUnavailableLabel(option: ProviderOption) {
+  if (option.credentialEnv) return `${option.label} 未配置`;
+  if (option.dependency) return `${option.label} 未安装`;
+  return `${option.label} 不可用`;
+}
 
 function loadWatchlist(): Instrument[] {
   try {
@@ -102,6 +169,8 @@ export default function App() {
   const [parameterSweep, setParameterSweep] = useState<ParameterSweepResponse | null>(null);
   const [experimentRuns, setExperimentRuns] = useState<ExperimentRun[]>([]);
   const [strategies, setStrategies] = useState<StrategyDefinition[]>([]);
+  const [providerCatalog, setProviderCatalog] = useState<ProviderCatalogResponse | null>(null);
+  const [providerPreferenceByMarket, setProviderPreferenceByMarket] = useState<Record<string, string>>(() => loadProviderSelection());
   const [strategyId, setStrategyId] = useState('ma_crossover');
   const [strategyParameters, setStrategyParameters] = useState<Record<string, number | string>>({});
   const [portfolioBacktest, setPortfolioBacktest] = useState<PortfolioBacktestResponse | null>(null);
@@ -252,10 +321,22 @@ export default function App() {
     }
   }, [experimentFilter, experimentSortBy, experimentSortDir, strategies]);
 
+  const providerCatalogData = providerCatalog ?? fallbackProviderCatalog;
+  const resolvedProviderByMarket = useMemo(() => (
+    providerSelectionFromCatalog(providerCatalogData, providerPreferenceByMarket)
+  ), [providerCatalogData, providerPreferenceByMarket]);
+
   useEffect(() => {
     getHealth()
       .then(setHealth)
       .catch((healthError) => setError(errorMessage(healthError)));
+    getProviders()
+      .then((catalog) => {
+        setProviderCatalog(catalog);
+      })
+      .catch(() => {
+        setProviderCatalog(null);
+      });
     getStrategies()
       .then((nextStrategies) => {
         setStrategies(nextStrategies);
@@ -277,6 +358,10 @@ export default function App() {
   }, [refreshExperimentRuns]);
 
   useEffect(() => {
+    saveProviderSelection(providerPreferenceByMarket);
+  }, [providerPreferenceByMarket]);
+
+  useEffect(() => {
     runSearch('AAPL');
   }, [runSearch]);
 
@@ -288,9 +373,9 @@ export default function App() {
     setError(null);
 
     Promise.all([
-      getQuote(selected.symbol),
-      getHistory({ symbol: selected.symbol, range, interval }),
-      getIndicators({ symbol: selected.symbol, range, interval })
+      getQuote(selected.symbol, resolvedProviderByMarket),
+      getHistory({ symbol: selected.symbol, range, interval, providers: resolvedProviderByMarket }),
+      getIndicators({ symbol: selected.symbol, range, interval, providers: resolvedProviderByMarket })
     ])
       .then(([nextQuote, nextHistory, nextIndicators]) => {
         if (cancelled) return;
@@ -308,7 +393,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [selected, range, interval, refreshToken]);
+  }, [selected, range, interval, refreshToken, resolvedProviderByMarket]);
 
   useEffect(() => {
     const nextStrategy = strategies.find((strategy) => strategy.id === strategyId);
@@ -330,6 +415,7 @@ export default function App() {
       symbol: selected.symbol,
       range,
       interval,
+      providers: resolvedProviderByMarket,
       parameters: strategyParameters
     })
       .then((nextBacktest) => {
@@ -351,7 +437,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [selected, selectedStrategy, strategyId, range, interval, strategyParamSignature, refreshToken, refreshExperimentRuns]);
+  }, [selected, selectedStrategy, strategyId, range, interval, strategyParamSignature, refreshToken, refreshExperimentRuns, resolvedProviderByMarket]);
 
   const portfolioSymbols = useMemo(() => watchlist.map((item) => item.symbol), [watchlist]);
 
@@ -365,6 +451,7 @@ export default function App() {
         symbol: selected.symbol,
         range,
         interval,
+        providers: resolvedProviderByMarket,
         fastMin: sweepFastMin,
         fastMax: sweepFastMax,
         slowMin: sweepSlowMin,
@@ -379,7 +466,7 @@ export default function App() {
     } finally {
       setSweepLoading(false);
     }
-  }, [selected, range, interval, sweepFastMin, sweepFastMax, sweepSlowMin, sweepSlowMax, strategyParameters.initialCapital, strategyParameters.feeRatePct, strategyParameters.slippagePct]);
+  }, [selected, range, interval, sweepFastMin, sweepFastMax, sweepSlowMin, sweepSlowMax, strategyParameters.initialCapital, strategyParameters.feeRatePct, strategyParameters.slippagePct, resolvedProviderByMarket]);
 
   useEffect(() => {
     if (portfolioSymbols.length < 2) {
@@ -396,7 +483,8 @@ export default function App() {
       symbols: portfolioSymbols,
       range,
       interval,
-      initialCapital: Number(strategyParameters.initialCapital) || 100000
+      initialCapital: Number(strategyParameters.initialCapital) || 100000,
+      providers: resolvedProviderByMarket
     })
       .then((nextBacktest) => {
         if (!cancelled) setPortfolioBacktest(nextBacktest);
@@ -414,7 +502,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [portfolioSymbols, range, interval, strategyParameters.initialCapital, refreshToken]);
+  }, [portfolioSymbols, range, interval, strategyParameters.initialCapital, refreshToken, resolvedProviderByMarket]);
 
   const handleCsvImport = useCallback(async (file: File | undefined) => {
     if (!file || !selected) return;
@@ -447,14 +535,14 @@ export default function App() {
         side: paperSide,
         quantity: paperQuantity,
         type: 'market'
-      });
+      }, resolvedProviderByMarket);
       setPaperAccount(nextAccount);
     } catch (orderError) {
       setPaperError(errorMessage(orderError));
     } finally {
       setPaperLoading(false);
     }
-  }, [selected, paperSide, paperQuantity]);
+  }, [selected, paperSide, paperQuantity, resolvedProviderByMarket]);
 
   const updatePaperRisk = useCallback(async () => {
     setPaperLoading(true);
@@ -486,6 +574,29 @@ export default function App() {
 
   const source = history?.source || quote?.source;
   const bars = useMemo(() => history?.bars ?? [], [history]);
+  const selectedMarketProviderConfig = selected
+    ? providerCatalogData.markets.find((market) => market.market === selected.market)
+    : undefined;
+  const selectedMarketRequestedProviderId = selected
+    ? providerPreferenceByMarket[selected.market]
+    : undefined;
+  const selectedMarketProviderId = selected
+    ? resolvedProviderByMarket[selected.market] ?? selectedMarketProviderConfig?.activeProvider ?? selectedMarketProviderConfig?.defaultProvider
+    : undefined;
+  const selectedMarketProviderLabel = providerLabel(selectedMarketProviderConfig, selectedMarketProviderId);
+  const selectedMarketRequestedProviderLabel = providerLabel(selectedMarketProviderConfig, selectedMarketRequestedProviderId);
+  const selectedMarketProviderFallback = Boolean(
+    selectedMarketRequestedProviderId
+    && selectedMarketProviderId
+    && selectedMarketRequestedProviderId !== selectedMarketProviderId
+  );
+  const unavailableProviders = useMemo(() => (
+    providerCatalogData.markets.flatMap((marketConfig) => (
+      marketConfig.options
+        .filter((option) => !option.available)
+        .map((option) => ({ market: marketConfig.market, option }))
+    ))
+  ), [providerCatalogData]);
   const latestMacd = useMemo(() => latestWhere(indicators?.macd, (point) => point.histogram !== null), [indicators]);
   const latestRsi = useMemo(() => latestWhere(indicators?.rsi14, (point) => point.value !== null), [indicators]);
 
@@ -504,6 +615,49 @@ export default function App() {
             API {health?.status ?? 'unknown'}
           </Tag>
           {source && <Tag color={source === 'demo' ? 'orange' : 'arcoblue'}>{source}</Tag>}
+          {selected && selectedMarketProviderLabel && (
+            <Tag color="arcoblue">
+              {selected.market} · {selectedMarketProviderLabel}
+            </Tag>
+          )}
+          {selected && selectedMarketProviderFallback && selectedMarketRequestedProviderLabel && selectedMarketProviderLabel && (
+            <Tag color="orange" title={selectedMarketRequestedProviderLabel}>
+              已回退到 {selectedMarketProviderLabel}
+            </Tag>
+          )}
+          {providerCatalogData.markets.map((marketConfig) => (
+            <Space key={marketConfig.market} align="center" size={6}>
+              <Text type="secondary">{marketConfig.market}</Text>
+              <Select
+                size="small"
+                style={{ width: 160 }}
+                value={providerSelectValue(
+                  marketConfig,
+                  providerPreferenceByMarket[marketConfig.market],
+                  resolvedProviderByMarket[marketConfig.market]
+                )}
+                onChange={(value) => setProviderPreferenceByMarket((current) => ({
+                  ...current,
+                  [marketConfig.market]: String(value)
+                }))}
+                options={marketConfig.options.map((option) => ({
+                  label: providerOptionLabel(option),
+                  value: option.id,
+                  disabled: !option.available,
+                  extra: providerStatusTitle(option)
+                }))}
+              />
+            </Space>
+          ))}
+          {unavailableProviders.map(({ market, option }) => (
+            <Tag
+              key={`${market}-${option.id}`}
+              color="orange"
+              title={providerStatusTitle(option)}
+            >
+              {market} {providerUnavailableLabel(option)}
+            </Tag>
+          ))}
           <Tag icon={<IconSync />}>proxy :8000</Tag>
         </Space>
       </Header>
@@ -608,7 +762,7 @@ export default function App() {
             />
           )}
 
-          <QuoteSummary quote={quote} />
+          <QuoteSummary quote={quote} providerLabel={selectedMarketProviderLabel} />
 
           <Card bordered={false} className="panel chart-panel">
             <div className="chart-toolbar">
@@ -665,7 +819,10 @@ export default function App() {
                 >
                   MA60
                 </Checkbox>
-                <Text type="secondary">{bars.length} bars</Text>
+                <Text type="secondary">
+                  {bars.length} bars
+                  {selectedMarketProviderLabel ? ` · ${selectedMarketProviderLabel}` : ''}
+                </Text>
                 {history?.quality && (
                   <Tag color={history.quality.invalidBars || history.quality.duplicateBars ? 'red' : history.quality.missingBars || history.quality.stale ? 'orange' : 'green'}>
                     Quality {history.quality.issues.length ? `${history.quality.issues.length} issues` : 'ok'}
@@ -706,7 +863,10 @@ export default function App() {
                 <Card size="small" bordered={false} className="indicator-card">
                   <Text type="secondary">总 bars</Text>
                   <Title heading={6}>{history.quality.totalBars}</Title>
-                  <Text type="secondary">当前来源 {history.source}</Text>
+                  <Text type="secondary">
+                    当前来源 {history.source}
+                    {selectedMarketProviderLabel ? ` · 数据源 ${selectedMarketProviderLabel}` : ''}
+                  </Text>
                 </Card>
                 <Card size="small" bordered={false} className="indicator-card">
                   <Text type="secondary">缺失</Text>
